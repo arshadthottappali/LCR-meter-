@@ -1,0 +1,37 @@
+{
+  "_comment": "GPIB command profile for the Hioki 3532-50. Edit a command here if your meter rejects it (use Tools > Verify command profile in the app to test every command on the real meter). Placeholders in {braces} are filled in by the program.",
+  "model": "Hioki 3532-50",
+  "freq_min_hz": 42,
+  "freq_max_hz": 5000000,
+
+  "idn": "*IDN?",
+  "reset": "*RST",
+  "clear_status": "*CLS",
+  "event_status_query": "*ESR?",
+  "header_off": ":HEADer OFF",
+
+  "set_frequency": ":FREQuency {value:.5E}",
+  "query_frequency": ":FREQuency?",
+
+  "set_level_mode": ":LEVel {mode}",
+  "level_modes": {"V": "Open-circuit voltage (V)", "CV": "Constant voltage (CV)", "CC": "Constant current (CC)"},
+  "set_level_value": {
+    "V": ":LEVel:VOLTage {value:.4G}",
+    "CV": ":LEVel:CVOLTage {value:.4G}",
+    "CC": ":LEVel:CCURrent {value:.4G}"
+  },
+
+  "set_speed": ":SPEEd {speed}",
+  "speeds": ["FAST", "NORMal", "SLOW", "SLOW2"],
+  "set_averaging": ":AVERaging {value:d}",
+  "set_range_auto": ":RANGe:AUTO ON",
+
+  "trigger_internal": ":TRIGger INTernal",
+  "trigger_external": ":TRIGger EXTernal",
+  "trigger_now": "*TRG",
+
+  "_measure_comment": ":MEASure:ITEM 5,0 selects |Z| (bit 0 = 1) and theta (bit 2 = 4) as the :MEASure? response. All other parameters are calculated from these two.",
+  "set_measure_items": ":MEASure:ITEM 5,0",
+  "measure": ":MEASure?",
+  "overflow_threshold": 1e19
+}
