@@ -11,6 +11,7 @@ from typing import Callable
 import numpy as np
 
 from ..instrument.hioki3532 import Hioki3532, MeasureSettings
+from .compensation import Compensation
 from .params import PARAM_KEYS, derive
 
 
@@ -48,21 +49,25 @@ class Point:
     values: dict[str, float]
     z_std: float = math.nan
     theta_std: float = math.nan
+    z_raw: float = math.nan  # before open/short correction
+    theta_raw: float = math.nan
     timestamp: str = ""
 
     def as_row(self) -> dict:
         row = {"index": self.index, "freq_set_Hz": self.freq_set, "freq_Hz": self.freq}
         row.update(self.values)
-        row.update({"Z_std": self.z_std, "theta_std": self.theta_std, "timestamp": self.timestamp})
+        row.update({"Z_std": self.z_std, "theta_std": self.theta_std,
+                    "Z_raw": self.z_raw, "theta_raw": self.theta_raw, "timestamp": self.timestamp})
         return row
 
 
 class SweepRunner:
     """Runs a sweep point by point; call stop() from another thread to abort."""
 
-    def __init__(self, meter: Hioki3532, cfg: SweepConfig) -> None:
+    def __init__(self, meter: Hioki3532, cfg: SweepConfig, compensation: Compensation | None = None) -> None:
         self.meter = meter
         self.cfg = cfg
+        self.comp = compensation
         self._stop = False
 
     def stop(self) -> None:
@@ -93,8 +98,9 @@ class SweepRunner:
                     ths.append(th)
                 if not zs:
                     break
-                z = statistics.fmean(zs)
-                th = statistics.fmean(ths)
+                z_raw = statistics.fmean(zs)
+                th_raw = statistics.fmean(ths)
+                z, th = self.comp.correct(i, f, z_raw, th_raw) if self.comp else (z_raw, th_raw)
                 p = Point(
                     index=i,
                     freq_set=f,
@@ -102,6 +108,8 @@ class SweepRunner:
                     values=derive(z, th, f),
                     z_std=statistics.stdev(zs) if len(zs) > 1 else math.nan,
                     theta_std=statistics.stdev(ths) if len(ths) > 1 else math.nan,
+                    z_raw=z_raw,
+                    theta_raw=th_raw,
                     timestamp=datetime.now().isoformat(timespec="milliseconds"),
                 )
                 points.append(p)
@@ -112,7 +120,7 @@ class SweepRunner:
         return points
 
 
-ROW_KEYS = ["index", "freq_set_Hz", "freq_Hz", *PARAM_KEYS, "Z_std", "theta_std", "timestamp"]
+ROW_KEYS = ["index", "freq_set_Hz", "freq_Hz", *PARAM_KEYS, "Z_std", "theta_std", "Z_raw", "theta_raw", "timestamp"]
 
 
 def estimate_duration_s(cfg: SweepConfig) -> float:

@@ -35,6 +35,10 @@ def header_label(key: str) -> str:
     unit = PARAM_UNIT.get(key)
     if key == "theta":
         return "theta_deg"
+    if key == "Z_raw":
+        return "Z_raw_ohm"
+    if key == "theta_raw":
+        return "theta_raw_deg"
     if unit:
         return f"{key}_{'ohm' if unit == 'Ω' else unit}"
     return key
@@ -44,8 +48,14 @@ def safe_filename(text: str) -> str:
     return re.sub(r"[^\w\-.]+", "_", text).strip("_") or "run"
 
 
-def default_filename(sample: str) -> str:
-    return f"{datetime.now():%Y%m%d_%H%M%S}_{safe_filename(sample)}.csv"
+def default_filename(sample: str, operator: str = "", test_no: int | str | None = None) -> str:
+    """YYYYMMDD_HHMMSS_<sample>_<operator>_T<test no>.csv (empty parts are left out)."""
+    parts = [f"{datetime.now():%Y%m%d_%H%M%S}", safe_filename(sample)]
+    if operator and operator.strip():
+        parts.append(safe_filename(operator))
+    if test_no not in (None, ""):
+        parts.append(f"T{safe_filename(str(test_no))}")
+    return "_".join(parts) + ".csv"
 
 
 def save_csv(run: Run, path: str | Path) -> Path:

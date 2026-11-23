@@ -25,6 +25,9 @@ The app also has:
 * Overlays of several runs or old CSV files for comparing samples.
 * Export of all runs to Excel, and of the plots as PNG.
 * Sample metadata (name, operator, temperature, notes) and all instrument settings, stored in the CSV header.
+* **Fixture calibration (open / short)** with one button: the app guides you through measuring the empty and the
+  shorted fixture, then corrects every reading. The raw readings are kept in the CSV (`Z_raw_ohm`, `theta_raw_deg`).
+* File names with date, time, sample, operator and test number, e.g. `20261123_181057_C100nF_Arshad_T3.csv`.
 * A **GPIB console** for typing any command by hand.
 * A **simulator** for trying the app without the meter.
 
@@ -59,9 +62,19 @@ Optional: **`build_exe.bat`** builds a stand-alone `dist\LCRSweep\LCRSweep.exe` 
 
 1. **Connection**: choose *GPIB-32 DLL* and click **Scan**. The app finds the meter's address. Then click **Connect**, and the Instrument field should show `HIOKI,3532-50,…`.
 2. **Tools → Verify command profile on meter**: sends every command once and reads the meter's error register. Do this once with a new meter (see section 6).
-3. Run the open and short compensation **on the meter's front panel** for your fixture. The compensation stays stored in the meter.
-4. Set the start and stop frequency, number of points, level and speed. Enter the sample name and click **Start sweep**.
-5. The data is saved automatically to `C:\Users\<you>\LCR_data\YYYYMMDD_HHMMSS_<sample>.csv`. You can change the folder.
+3. Set the start and stop frequency, number of points, level and speed (sections 2 and 3).
+4. **Calibrate the fixture** (section 4, *Calibrate fixture (open + short)…*), **without the sample**:
+   * step 1, OPEN: fixture empty, clips not touching;
+   * step 2, SHORT: fixture terminals connected directly together.
+
+   (Calibrate with the same frequency range and the same voltage that you will use for the measurement. The app
+   uses the settings of sections 2 and 3 and warns you if you change them afterwards.)
+   The calibration is saved in `LCR_data\calibration\` and loaded again the next time the app starts.
+   Use either this or the meter's own front-panel open/short compensation, not both.
+5. Put the sample in the fixture, enter sample name, operator and test number, and click **Start sweep**.
+   The test number counts up by 1 after every completed sweep.
+6. The data is saved automatically to `C:\Users\<you>\LCR_data\YYYYMMDD_HHMMSS_<sample>_<operator>_T<test no>.csv`.
+   You can change the folder.
 
 ## 5. How fast is it?
 
@@ -108,11 +121,13 @@ command strings have not yet been checked against it. If **Tools → Verify comm
 # level_mode: V
 # speed: NORMal
 ...
-index,freq_set_Hz,freq_Hz,Z_ohm,theta_deg,Rs_ohm,X_ohm,Ls_H,Cs_F,Rp_ohm,Lp_H,Cp_F,Y_S,G_S,B_S,D,Q,Z_std,theta_std,timestamp
+index,freq_set_Hz,freq_Hz,Z_ohm,theta_deg,Rs_ohm,X_ohm,Ls_H,Cs_F,Rp_ohm,Lp_H,Cp_F,Y_S,G_S,B_S,D,Q,Z_std,theta_std,Z_raw_ohm,theta_raw_deg,timestamp
 0,100,100,15920.2,-89.98,5.56,-15920.2,...
 ```
 
-Lines starting with `#` hold metadata. Excel, Origin, MATLAB and Python all read the file directly, for example:
+Lines starting with `#` hold metadata, including `test_number` and `compensation` (which calibration file was
+applied, or `none`). `Z_ohm`/`theta_deg` and everything derived from them are corrected; `Z_raw_ohm`/`theta_raw_deg`
+are the meter's readings before correction. Excel, Origin, MATLAB and Python all read the file directly, for example:
 
 ```python
 import pandas as pd
@@ -124,7 +139,8 @@ df = pd.read_csv("20261123_164308_C100nF.csv", comment="#")
 ```
 lcr_app/
   instrument/  transport.py (VISA + gpib-32.dll), hioki3532.py (driver), simulator.py, commands_3532_50.json
-  core/        params.py (Z, θ → all parameters), sweep.py (sweep engine), storage.py (CSV/Excel)
+  core/        params.py (Z, θ → all parameters), sweep.py (sweep engine), storage.py (CSV/Excel),
+               compensation.py (open/short correction)
   gui/         main_window.py, worker.py (background thread)
 tests/         pytest tests (run: python -m pytest tests)
 ```

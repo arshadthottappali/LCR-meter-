@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from .. import __version__
+from ..core.compensation import Compensation
 from ..core.params import PARAM_KEYS, PARAM_LABEL, PARAM_UNIT, parse_si, si_format
 from ..core.storage import CsvAppender, Run, default_filename, load_csv, save_csv, save_xlsx
 from ..core.sweep import ROW_KEYS, SweepConfig, estimate_duration_s
@@ -130,6 +131,12 @@ class MainWindow(QMainWindow):
         self.thread: QThread | None = None
         self.worker: SweepWorker | None = None
         self.t_start = 0.0
+        self.mode = "sweep"  # what the running worker does: sweep, open or short
+        self.comp: Compensation | None = None  # finished open+short calibration
+        self._cal_cfg: SweepConfig | None = None
+        self._cal_open: list[list[float]] = []  # open data while the short is pending
+        self._cal_open_time = ""
+        self._cal_rows: list[dict] = []
         self.bridge = TrafficBridge()
         self.bridge.message.connect(self._log_traffic)
 
@@ -299,13 +306,53 @@ class MainWindow(QMainWindow):
         fl.addRow(self.use_trg)
         lay.addWidget(g)
 
+        # ---- fixture calibration
+        g = QGroupBox("4. Fixture calibration (open / short)")
+        vl = QVBoxLayout(g)
+        info = QLabel(
+            "Removes cables and clips from the results. <b>No sample during calibration</b>: "
+            "fixture empty (OPEN), then terminals shorted (SHORT).<br>"
+            "<i>(Use the same frequency range and the same voltage that you will use for the measurement; "
+            "sections 2 and 3 are used automatically.)</i>")
+        info.setWordWrap(True)
+        vl.addWidget(info)
+        self.btn_cal = QPushButton("Calibrate fixture (open + short)…")
+        self.btn_cal.setMinimumHeight(30)
+        self.btn_cal.clicked.connect(self.calibrate)
+        vl.addWidget(self.btn_cal)
+        self.cal_status = QLabel()
+        self.cal_status.setWordWrap(True)
+        vl.addWidget(self.cal_status)
+        ch = QHBoxLayout()
+        self.cal_apply = QCheckBox("Apply correction to measurements")
+        self.cal_apply.setChecked(True)
+        self.cal_apply.toggled.connect(self._update_cal_status)
+        self.btn_cal_clear = QPushButton("Clear")
+        self.btn_cal_clear.clicked.connect(self.clear_calibration)
+        ch.addWidget(self.cal_apply, 1)
+        ch.addWidget(self.btn_cal_clear)
+        vl.addLayout(ch)
+        lay.addWidget(g)
+
         # ---- sample
-        g = QGroupBox("4. Sample && output")
+        g = QGroupBox("5. Sample && output")
         fl = QFormLayout(g)
         self.sample = QLineEdit("sample1")
         fl.addRow("Sample name:", self.sample)
         self.operator = QLineEdit()
         fl.addRow("Operator:", self.operator)
+        self.test_no = QSpinBox()
+        self.test_no.setRange(1, 99999)
+        self.test_no.setToolTip("Goes into the file name (…_T3.csv) and the CSV header. "
+                                "Counts up by 1 after every completed sweep.")
+        fl.addRow("Test no.:", self.test_no)
+        self.fname_preview = QLabel()
+        self.fname_preview.setStyleSheet("color:#666")
+        self.fname_preview.setWordWrap(True)
+        fl.addRow("File name:", self.fname_preview)
+        self.sample.textChanged.connect(self._update_fname)
+        self.operator.textChanged.connect(self._update_fname)
+        self.test_no.valueChanged.connect(self._update_fname)
         self.temp = QLineEdit()
         self.temp.setPlaceholderText("optional, e.g. 25 °C")
         fl.addRow("Temperature:", self.temp)
@@ -454,6 +501,14 @@ class MainWindow(QMainWindow):
         if self.level_mode.currentData() == "CC" and self.level_val.text() in ("1", "1.0"):
             self.level_val.setText("10m")
 
+    def _file_name(self) -> str:
+        return default_filename(self.sample.text().strip() or "sample", self.operator.text().strip(),
+                                self.test_no.value())
+
+    def _update_fname(self) -> None:
+        self.fname_preview.setText(self._file_name().replace(datetime.now().strftime("%Y%m%d_%H%M%S"),
+                                                              "<date>_<time>"))
+
     def _browse_out(self) -> None:
         d = QFileDialog.getExistingDirectory(self, "Data folder", self.out_dir.text())
         if d:
@@ -526,6 +581,7 @@ class MainWindow(QMainWindow):
         return {
             "sample": self.sample.text().strip() or "sample",
             "operator": self.operator.text(),
+            "test_number": self.test_no.value(),
             "temperature": self.temp.text(),
             "notes": self.notes.text(),
             "start_time": datetime.now().isoformat(timespec="seconds"),
@@ -541,8 +597,18 @@ class MainWindow(QMainWindow):
             "start_hz": cfg.start_hz,
             "stop_hz": cfg.stop_hz,
             "points": len(cfg.frequencies()),
+            "compensation": self._comp_meta(),
             "software": f"LCR Sweep v{__version__}",
         }
+
+    def _active_comp(self) -> Compensation | None:
+        return self.comp if self.comp and self.cal_apply.isChecked() else None
+
+    def _comp_meta(self) -> str:
+        c = self._active_comp()
+        if not c:
+            return "none"
+        return f"{c.describe()} (open {c.open_time}, short {c.short_time}, file {c.path or 'not saved'})"
 
     # ============================================================ connection
     def scan(self) -> None:
@@ -650,13 +716,16 @@ class MainWindow(QMainWindow):
         warn = self._check_max_level(cfg)
         if warn and QMessageBox.question(self, "Signal level", warn + "\n\nStart anyway?") != QMessageBox.Yes:
             return
+        if not self._check_calibration(cfg):
+            return
 
         meta = self.metadata(cfg)
-        name = meta["sample"]
+        base = f"{meta['sample']} T{meta['test_number']}"
+        name = base
         existing = {r.name for r in self.runs}
         k = 2
         while name in existing:
-            name = f"{meta['sample']} ({k})"
+            name = f"{base} ({k})"
             k += 1
         self.current = Run(name=name, meta=meta)
         self._add_run(self.current)
@@ -665,7 +734,7 @@ class MainWindow(QMainWindow):
 
         if self.autosave.isChecked():
             try:
-                path = Path(self.out_dir.text()) / default_filename(meta["sample"])
+                path = Path(self.out_dir.text()) / self._file_name()
                 self.appender = CsvAppender(path, meta)
                 self.current.path = str(path)
                 self._log(f"Auto-saving to {path}")
@@ -673,14 +742,17 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Auto-save", f"Cannot write to data folder:\n{e}")
                 self.appender = None
 
+        self._log(f"Sweep started: {len(cfg.frequencies())} points, compensation: {self._comp_meta()}")
+        self._start_worker(cfg, "sweep", self._active_comp())
+
+    def _start_worker(self, cfg: SweepConfig, mode: str, comp: Compensation | None = None) -> None:
+        self.mode = mode
         self.progress.setRange(0, len(cfg.frequencies()))
         self.progress.setValue(0)
         self._set_running(True)
         self.t_start = time.time()
-        self._log(f"Sweep started: {len(cfg.frequencies())} points")
-
         self.thread = QThread(self)
-        self.worker = SweepWorker(self.meter, cfg)
+        self.worker = SweepWorker(self.meter, cfg, comp)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.point.connect(self._on_point)
@@ -698,8 +770,17 @@ class MainWindow(QMainWindow):
         self.btn_start.setEnabled(not running)
         self.btn_stop.setEnabled(running)
         self.btn_connect.setEnabled(not running)
+        self.btn_cal.setEnabled(not running)
+        self.btn_cal_clear.setEnabled(not running)
 
     def _on_point(self, row: dict, done: int, total: int) -> None:
+        if self.mode != "sweep":
+            self._cal_rows.append(row)
+            self.progress.setValue(done)
+            self.eta.setText(f"Calibration {self.mode.upper()}: point {done}/{total}")
+            self.readout.setText(f"{self.mode.upper()} calibration   f = {si_format(row['freq_Hz'], 'Hz')}   "
+                                 f"|Z| = {si_format(row['Z'], 'Ω')}   θ = {row['theta']:.3f}°")
+            return
         self.current.rows.append(row)
         if self.appender:
             self.appender.append(row)
@@ -727,8 +808,14 @@ class MainWindow(QMainWindow):
         self._set_running(False)
 
     def _on_finished(self, complete: bool) -> None:
+        if self.mode != "sweep":
+            self._finish()
+            self._cal_step_done(complete)
+            return
         n = len(self.current.rows) if self.current else 0
         self._finish()
+        if complete:
+            self.test_no.setValue(self.test_no.value() + 1)  # ready for the next test
         msg = f"Sweep {'completed' if complete else 'stopped'}: {n} points in {time.time() - self.t_start:.1f} s"
         if self.current and self.current.path:
             msg += f" — saved to {self.current.path}"
@@ -738,9 +825,155 @@ class MainWindow(QMainWindow):
     def _on_failed(self, err: str) -> None:
         self._finish()
         self._log(f"ERROR: {err}")
+        if self.mode != "sweep":
+            self.mode = "sweep"
+            self._cal_open = []
+            QMessageBox.critical(self, "Calibration error", f"{err.splitlines()[0]}\n\nThe calibration was not saved.")
+            return
         QMessageBox.critical(self, "Measurement error",
                              f"{err.splitlines()[0]}\n\nData measured so far is kept"
                              + (" and saved." if self.current and self.current.path else "."))
+
+    # ========================================================= calibration
+    def _cfg_summary(self, cfg: SweepConfig) -> str:
+        f = cfg.frequencies()
+        unit = "A" if cfg.meas.level_mode == "CC" else "V"
+        return (f"{si_format(f[0], 'Hz')} … {si_format(f[-1], 'Hz')}, {len(f)} points, "
+                f"level {cfg.meas.level_mode} {si_format(cfg.meas.level_value, unit)}")
+
+    def calibrate(self) -> None:
+        if not self.meter:
+            QMessageBox.information(self, "Not connected", "Connect to the meter first (or choose the Simulator).")
+            return
+        if self.thread:
+            return
+        try:
+            cfg = self.build_config()
+        except Exception as e:
+            QMessageBox.warning(self, "Invalid settings", str(e))
+            return
+        warn = self._check_max_level(cfg)
+        if warn and QMessageBox.question(self, "Signal level", warn + "\n\nCalibrate anyway?") != QMessageBox.Yes:
+            return
+        if QMessageBox.information(
+            self, "Calibration step 1 of 2: OPEN",
+            "<b>Remove the sample.</b><br>Leave the fixture empty and open: the clips / terminals must not "
+            "touch each other or anything else. Keep the cables where they will be during the measurement."
+            f"<br><br>Calibration uses: {self._cfg_summary(cfg)}<br>"
+            "<i>(Use the same frequency range and the same voltage that you will use for the measurement.)</i>"
+            "<br><br>Click OK to measure the OPEN fixture.",
+            QMessageBox.Ok | QMessageBox.Cancel) != QMessageBox.Ok:
+            return
+        self._cal_cfg = cfg
+        self._cal_open = []
+        self._cal_rows = []
+        self._log(f"Calibration OPEN started: {self._cfg_summary(cfg)}")
+        self._start_worker(cfg, "open")
+
+    def _cal_step_done(self, complete: bool) -> None:
+        step, rows = self.mode, self._cal_rows
+        self.mode = "sweep"
+        if not complete:
+            self._cal_open = []
+            self._log(f"Calibration {step.upper()} stopped; calibration not saved")
+            self.eta.setText("Calibration stopped")
+            return
+        data = [[r["Z"], r["theta"]] for r in rows]
+        if step == "open":
+            self._cal_open = data
+            self._cal_open_time = Compensation.now()
+            self._log("Calibration OPEN finished")
+            if QMessageBox.information(
+                self, "Calibration step 2 of 2: SHORT",
+                "<b>Short the fixture</b> (still no sample): connect the two terminals directly together, "
+                "e.g. with the shorting bar, or clamp the clips onto each other or onto one short piece of wire."
+                "<br><br>Click OK to measure the SHORT fixture.",
+                QMessageBox.Ok | QMessageBox.Cancel) != QMessageBox.Ok:
+                self._cal_open = []
+                self._log("Calibration cancelled; nothing saved")
+                self.eta.setText("Calibration cancelled")
+                return
+            self._cal_rows = []
+            self._log("Calibration SHORT started")
+            self._start_worker(self._cal_cfg, "short")
+            return
+        # short finished -> calibration complete
+        cfg = self._cal_cfg
+        comp = Compensation(
+            settings={"level_mode": cfg.meas.level_mode, "level_value": cfg.meas.level_value,
+                      "speed": cfg.meas.speed, "averaging": cfg.meas.averaging, "instrument": self.idn_lbl.text()},
+            freqs=[float(r["freq_set_Hz"]) for r in rows],
+            open_z=self._cal_open, short_z=data,
+            open_time=self._cal_open_time, short_time=Compensation.now(),
+        )
+        self._cal_open = []
+        path = Path(self.out_dir.text()) / "calibration" / f"{datetime.now():%Y%m%d_%H%M%S}_open_short.json"
+        try:
+            comp.save(path)
+            self._log(f"Calibration saved to {path}")
+        except OSError as e:
+            self._log(f"Calibration could not be saved to disk ({e}); it is used for this session only")
+        self.comp = comp
+        self.cal_apply.setChecked(True)
+        self._update_cal_status()
+        self.eta.setText("Calibration complete")
+        QMessageBox.information(
+            self, "Calibration complete",
+            "Open and short calibration finished.<br><br><b>Now put your sample in the fixture</b> and click "
+            "<b>Start sweep</b>. Every reading will be corrected automatically.")
+
+    def _ask(self, title: str, text: str, icon) -> str:
+        """Returns 'cal', 'go' or 'cancel'."""
+        box = QMessageBox(icon, title, text, parent=self)
+        b_cal = box.addButton("Calibrate first", QMessageBox.AcceptRole)
+        b_go = box.addButton("Measure without correction", QMessageBox.DestructiveRole)
+        box.addButton(QMessageBox.Cancel)
+        box.exec()
+        return "cal" if box.clickedButton() is b_cal else "go" if box.clickedButton() is b_go else "cancel"
+
+    def _check_calibration(self, cfg: SweepConfig) -> bool:
+        """Ask what to do when the calibration is missing or does not fit. False = do not start."""
+        if self.comp and not self.cal_apply.isChecked():
+            return True  # correction deliberately switched off
+        if not self.comp:
+            ans = self._ask("No fixture calibration",
+                            "The fixture has not been calibrated, so the results will include the impedance of "
+                            "the cables and clips.\n\nCalibrate first (open + short, without the sample)?",
+                            QMessageBox.Question)
+        else:
+            problems = self.comp.mismatch(
+                cfg.frequencies(), {"level_mode": cfg.meas.level_mode, "level_value": cfg.meas.level_value})
+            if not problems:
+                return True
+            ans = self._ask("Calibration does not match",
+                            "The calibration was made with different settings:\n\n• " + "\n• ".join(problems)
+                            + "\n\nCalibrate with the same frequency range and voltage as the measurement.",
+                            QMessageBox.Warning)
+            if ans == "go":
+                self.cal_apply.setChecked(False)
+        if ans == "cal":
+            self.calibrate()
+        return ans == "go"
+
+    def clear_calibration(self) -> None:
+        self.comp = None
+        self._update_cal_status()
+        self._log("Calibration cleared")
+
+    def _update_cal_status(self) -> None:
+        c = self.comp
+        self.cal_apply.setEnabled(c is not None)
+        if not c:
+            self.cal_status.setText("<span style='color:#b35900'>Not calibrated</span>")
+            return
+        unit = "A" if c.settings.get("level_mode") == "CC" else "V"
+        txt = (f"Calibrated {c.short_time.replace('T', ' ')}: {si_format(c.freqs[0], 'Hz')} … "
+               f"{si_format(c.freqs[-1], 'Hz')}, {len(c.freqs)} points, level {c.settings.get('level_mode')} "
+               f"{si_format(float(c.settings.get('level_value', math.nan)), unit)}")
+        if not self.cal_apply.isChecked():
+            txt += " (correction OFF)"
+        color = "#007a33" if self.cal_apply.isChecked() else "#777"
+        self.cal_status.setText(f"<span style='color:{color}'>{txt}</span>")
 
     # ========================================================= runs / plots
     def _add_run(self, run: Run) -> None:
@@ -827,7 +1060,9 @@ class MainWindow(QMainWindow):
         if not run:
             QMessageBox.information(self, "Save", "Select a run in the list first.")
             return
-        p, _ = QFileDialog.getSaveFileName(self, "Save CSV", str(Path(self.out_dir.text()) / default_filename(run.name)),
+        m = run.meta
+        fname = default_filename(m.get("sample", run.name), m.get("operator", ""), m.get("test_number"))
+        p, _ = QFileDialog.getSaveFileName(self, "Save CSV", str(Path(self.out_dir.text()) / fname),
                                            "CSV files (*.csv)")
         if p:
             save_csv(run, p)
@@ -906,7 +1141,7 @@ class MainWindow(QMainWindow):
 
     # ============================================================ settings
     _PERSIST = ["f_start", "f_stop", "level_val", "sample", "operator", "out_dir"]
-    _PERSIST_SPIN = ["n_points", "avg", "settle", "reads", "gpib_addr", "gpib_board"]
+    _PERSIST_SPIN = ["n_points", "avg", "settle", "reads", "gpib_addr", "gpib_board", "test_no"]
     _PERSIST_COMBO = ["backend", "spacing", "level_mode", "speed"]
 
     def _restore_settings(self) -> None:
@@ -929,8 +1164,19 @@ class MainWindow(QMainWindow):
         v = s.value("custom")
         if v:
             self.custom.setPlainText(str(v))
+        v = s.value("cal_path")
+        if v and Path(str(v)).is_file():
+            try:
+                self.comp = Compensation.load(str(v))
+            except Exception:
+                self.comp = None
+        v = s.value("cal_apply")
+        if v is not None:
+            self.cal_apply.setChecked(str(v).lower() in ("true", "1"))
+        self._update_cal_status()
         self._spacing_changed()
         self._level_mode_changed()
+        self._update_fname()
 
     def closeEvent(self, ev) -> None:
         if self.thread:
@@ -949,6 +1195,8 @@ class MainWindow(QMainWindow):
             s.setValue(n, getattr(self, n).currentIndex())
         s.setValue("visa_res", self.visa_res.currentText())
         s.setValue("custom", self.custom.toPlainText())
+        s.setValue("cal_path", self.comp.path if self.comp else "")
+        s.setValue("cal_apply", self.cal_apply.isChecked())
         if self.appender:
             self.appender.close()
         if self.transport:
