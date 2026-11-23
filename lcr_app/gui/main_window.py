@@ -12,13 +12,13 @@ from pathlib import Path
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import QSettings, Qt, QThread, QTimer
-from PySide6.QtGui import QAction, QColor, QFont
+from PySide6.QtCore import QSettings, Qt, QThread, QTimer, QUrl
+from PySide6.QtGui import QAction, QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
     QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
     QPlainTextEdit, QProgressBar, QPushButton, QScrollArea, QSpinBox, QSplitter, QTableWidget,
-    QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
+    QTableWidgetItem, QTabWidget, QTextBrowser, QVBoxLayout, QWidget,
 )
 
 from .. import __version__
@@ -116,6 +116,61 @@ class PlotPanel(QWidget):
                            symbolPen=None, name=run.name)
 
 
+MANUAL_PATH = Path(__file__).resolve().parent.parent / "help" / "manual.html"
+
+
+class HelpPanel(QWidget):
+    """The user manual (lcr_app/help/manual.html) with search."""
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        lay = QVBoxLayout(self)
+        bar = QHBoxLayout()
+        b_top = QPushButton("Contents")
+        b_top.clicked.connect(lambda: self.browser.scrollToAnchor("top"))
+        b_back = QPushButton("◄ Back")
+        self.search = QLineEdit()
+        self.search.setPlaceholderText("Search the manual (Enter = next match)")
+        self.search.returnPressed.connect(self.find_next)
+        b_find = QPushButton("Find")
+        b_find.clicked.connect(self.find_next)
+        b_ext = QPushButton("Open in web browser / print")
+        b_ext.clicked.connect(self.open_external)
+        for wdg in (b_top, b_back):
+            bar.addWidget(wdg)
+        bar.addWidget(self.search, 1)
+        bar.addWidget(b_find)
+        bar.addWidget(b_ext)
+        lay.addLayout(bar)
+        self.browser = QTextBrowser()
+        self.browser.setOpenExternalLinks(True)
+        b_back.clicked.connect(self.browser.backward)
+        if MANUAL_PATH.is_file():
+            self.browser.setSource(QUrl.fromLocalFile(str(MANUAL_PATH)))
+        else:
+            self.browser.setHtml(f"<p>Manual not found: {MANUAL_PATH}</p>")
+        lay.addWidget(self.browser, 1)
+
+    def find_next(self) -> None:
+        text = self.search.text().strip()
+        if not text:
+            return
+        if not self.browser.find(text):  # wrap around to the beginning
+            cur = self.browser.textCursor()
+            cur.movePosition(cur.MoveOperation.Start)
+            self.browser.setTextCursor(cur)
+            if not self.browser.find(text):
+                self.search.setStyleSheet("background:#fde2e2")
+                return
+        self.search.setStyleSheet("")
+
+    def open_external(self) -> None:
+        if sys.platform == "win32":
+            os.startfile(str(MANUAL_PATH))  # type: ignore[attr-defined]
+        else:
+            subprocess.Popen(["xdg-open", str(MANUAL_PATH)])
+
+
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -183,6 +238,17 @@ class MainWindow(QMainWindow):
         a.triggered.connect(self.reload_profile)
         t.addAction(a)
         h = m.addMenu("&Help")
+        a = QAction("User manual", self)
+        a.setShortcut(QKeySequence("F1"))
+        a.triggered.connect(self.show_manual)
+        h.addAction(a)
+        for text, anchor in [("  Quick start", "quick"), ("  Connections (4-terminal)", "conn"),
+                             ("  Calibration (open / short)", "cal"), ("  Parameters explained", "params"),
+                             ("  Test signal settings", "signal"), ("  Troubleshooting", "trouble")]:
+            a = QAction(text, self)
+            a.triggered.connect(lambda _=False, an=anchor: self.show_manual(an))
+            h.addAction(a)
+        h.addSeparator()
         a = QAction("About", self)
         a.triggered.connect(self.about)
         h.addAction(a)
@@ -457,6 +523,11 @@ class MainWindow(QMainWindow):
         ch.addWidget(self.log_traffic)
         cl.addLayout(ch)
         tabs.addTab(cw, "GPIB console")
+
+        # user manual
+        self.help_panel = HelpPanel()
+        tabs.addTab(self.help_panel, "Help / Manual")
+        self.tabs = tabs
 
         # runs list on the side
         side = QWidget()
@@ -1133,6 +1204,10 @@ class MainWindow(QMainWindow):
             self._log("Command profile reloaded")
         except (OSError, json.JSONDecodeError) as e:
             QMessageBox.critical(self, "Profile", f"Cannot read {PROFILE_PATH}:\n{e}")
+
+    def show_manual(self, anchor: str = "top") -> None:
+        self.tabs.setCurrentWidget(self.help_panel)
+        self.help_panel.browser.scrollToAnchor(anchor or "top")
 
     def about(self) -> None:
         QMessageBox.about(self, "About", f"<b>LCR Sweep</b> v{__version__}<br>Frequency-sweep measurements with the "

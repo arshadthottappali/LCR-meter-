@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>LCR Sweep: User manual</title>
+<style>
+body  { font-family: "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #1a1a1a; }
+h1    { font-size: 18pt; color: #0b3d6e; }
+h2    { font-size: 14pt; color: #0b3d6e; margin-top: 22px; border-bottom: 1px solid #9db4cc; }
+h3    { font-size: 11.5pt; color: #174f86; margin-top: 14px; }
+pre   { font-family: Consolas, "Courier New", monospace; font-size: 9.5pt; background-color: #f3f6f9;
+        border: 1px solid #d0dae4; padding: 6px; }
+code  { font-family: Consolas, "Courier New", monospace; background-color: #f0f0f0; }
+.eq   { font-family: Consolas, "Courier New", monospace; font-size: 10pt; background-color: #eef5ec;
+        border: 1px solid #c4dcc0; padding: 6px; }
+.tip  { background-color: #eaf3fb; border: 1px solid #b7d3ee; padding: 6px; }
+.warn { background-color: #fdf1e6; border: 1px solid #f0c69c; padding: 6px; }
+.lvl  { color: #ffffff; background-color: #5b7f3a; font-size: 8pt; padding: 1px 4px; }
+.adv  { color: #ffffff; background-color: #8a3a3a; font-size: 8pt; padding: 1px 4px; }
+th    { background-color: #e3ebf3; text-align: left; }
+td, th { vertical-align: top; }
+</style>
+</head>
+<body>
+
+<a name="top"></a>
+<h1>LCR Sweep: User manual</h1>
+<p>Frequency-sweep impedance measurements with the <b>Hioki 3532-50 LCR HiTESTER</b> over GPIB.<br>
+This manual starts with the basics (no prior knowledge needed) and ends with the advanced topics.
+Sections marked <span class="lvl">BEGINNER</span> are enough for everyday measurements; sections marked
+<span class="adv">ADVANCED</span> explain the theory and the details.</p>
+
+<h3>Contents</h3>
+<table border="0" cellpadding="2">
+<tr><td valign="top">
+<b>Part A: Getting started</b><br>
+1. <a href="#quick">Quick start (5 minutes)</a><br>
+2. <a href="#safety">Safety first</a><br>
+3. <a href="#workflow">The measuring workflow, step by step</a><br>
+<br>
+<b>Part B: Understanding impedance</b><br>
+4. <a href="#ac">What does an LCR meter measure?</a><br>
+5. <a href="#ideal">Ideal R, L and C</a><br>
+6. <a href="#real">Real components and self-resonance</a><br>
+7. <a href="#models">Series and parallel equivalent circuits</a><br>
+8. <a href="#params">Every parameter explained</a><br>
+</td><td width="30"></td><td valign="top">
+<b>Part C: Doing it right</b><br>
+9. <a href="#conn">Connections: the 4-terminal method</a><br>
+10. <a href="#cal">Fixture calibration (open / short)</a><br>
+11. <a href="#signal">Test signal and measurement settings</a><br>
+12. <a href="#sweep">Frequency sweep settings</a><br>
+13. <a href="#recipes">Recipes for common measurements</a><br>
+14. <a href="#plots">Reading the plots</a><br>
+<br>
+<b>Part D: Reference</b><br>
+15. <a href="#files">Data files</a><br>
+16. <a href="#accuracy">Accuracy and good practice</a><br>
+17. <a href="#trouble">Troubleshooting</a><br>
+18. <a href="#advanced">Advanced topics</a><br>
+19. <a href="#glossary">Glossary</a><br>
+</td></tr></table>
+
+<!-- ================================================================== -->
+<a name="quick"></a>
+<h2>1. Quick start (5 minutes) <span class="lvl">BEGINNER</span></h2>
+<ol>
+<li><b>Connect</b> (section 1 of the window): Interface <i>VISA</i>, resource <code>GPIB0::1::INSTR</code>,
+    click <b>Connect</b>. The Instrument field shows <code>HIOKI,3532,50,…</code>.</li>
+<li><b>Frequency sweep</b> (section 2): for example 100 Hz to 1 MHz, 51 points, logarithmic.</li>
+<li><b>Test signal</b> (section 3): for example level type CV, 1 V, speed NORMAL.</li>
+<li><b>Calibrate</b> (section 4): click <b>Calibrate fixture (open + short)…</b> and follow the two pop-ups.
+    <b>No sample in the fixture during calibration.</b></li>
+<li><b>Measure</b> (section 5): insert the sample, enter sample name, operator and test number, click
+    <b>Start sweep</b>.</li>
+<li>The data is <b>saved automatically</b> as a CSV file in the data folder. Nothing else to do.</li>
+</ol>
+<p class="tip"><b>Tip:</b> for a capacitor, choose <b>Cs</b> (or Cp) and <b>D</b> in the two plots; for an inductor
+<b>Ls</b> and <b>Q</b>; for a resistor <b>Rs</b> and <b>θ</b>. Section <a href="#params">8</a> explains why.</p>
+
+<!-- ================================================================== -->
+<a name="safety"></a>
+<h2>2. Safety first <span class="lvl">BEGINNER</span></h2>
+<p class="warn"><b>The measurement terminals tolerate at most ±40 V DC</b> (printed on the front panel: "UNKNOWN ±40 V DC MAX").</p>
+<ul>
+<li><b>Discharge capacitors</b> before connecting them (short the leads through a resistor of about 100 Ω–1 kΩ
+    for a few seconds). A charged capacitor can destroy the meter's input.</li>
+<li><b>Never measure live circuits</b> or anything connected to mains or a power supply. Disconnect the
+    component from its circuit first.</li>
+<li><b>Do not measure batteries</b>, charged supercapacitors or power supplies: their DC voltage and very low
+    impedance are outside what the meter is made for.</li>
+<li>Some samples (piezo elements, large inductors) can generate voltages when they are squeezed, heated or
+    when current is interrupted. Handle them gently and let them settle.</li>
+</ul>
+
+<!-- ================================================================== -->
+<a name="workflow"></a>
+<h2>3. The measuring workflow, step by step <span class="lvl">BEGINNER</span></h2>
+<pre>
+ ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+ │ 1. Connect   │──►│ 2. Choose    │──►│ 3. Calibrate │──►│ 4. Insert    │──►│ 5. Start     │
+ │    meter     │   │  frequencies │   │  OPEN, then  │   │  the sample, │   │  sweep; data │
+ │   (GPIB)     │   │  + test level│   │  SHORT (no   │   │  name, test  │   │  saves itself│
+ │              │   │              │   │  sample!)    │   │  number      │   │              │
+ └──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘   └──────┬───────┘
+                                              ▲                                     │
+                                              │  only if you change frequencies,    │ next sample:
+                                              └──── level, cables or fixture ◄──────┘ back to step 4
+</pre>
+<h3>Why this order?</h3>
+<ul>
+<li>The <b>calibration must use exactly the same frequencies and the same test level</b> as the measurement,
+    because the cables and the fixture behave differently at every frequency. That is why you choose the
+    sweep (step 2) <i>before</i> you calibrate (step 3). The app uses your current settings automatically
+    and warns you if they change later.</li>
+<li>You do <b>not</b> need to calibrate again for every sample. One calibration is valid as long as the
+    settings, cables and fixture stay the same.</li>
+<li>The <b>test number</b> counts up by one after every completed sweep, so each measurement gets its own
+    file: <code>20261123_181057_C100nF_Arshad_T3.csv</code> (date, time, sample, operator, test number).</li>
+</ul>
+
+<!-- ================================================================== -->
+<a name="ac"></a>
+<h2>4. What does an LCR meter measure? <span class="lvl">BEGINNER</span></h2>
+<p>An LCR meter applies a small <b>AC (alternating) voltage</b> of a chosen frequency to the sample, measures the
+<b>AC current</b> that flows, and compares the two. Two things are measured:</p>
+<ul>
+<li><b>How big the current is</b> for a given voltage. This gives the <b>impedance magnitude |Z|</b> in ohms (Ω),
+    the AC version of resistance:</li>
+</ul>
+<p class="eq">|Z| = V<sub>rms</sub> / I<sub>rms</sub>          (unit: Ω)</p>
+<ul>
+<li><b>How much the current is shifted in time</b> relative to the voltage. This gives the
+    <b>phase angle θ</b> in degrees.</li>
+</ul>
+<pre>
+  voltage  ──╮    ╭──╮    ╭──          θ = 0°    : current in step with voltage      → resistor
+             ╰────╯  ╰────╯            θ = +90°  : current lags  ¼ period behind      → inductor
+  current  ────╮    ╭──╮    ╭          θ = −90°  : current leads ¼ period ahead       → capacitor
+               ╰────╯  ╰────╯          anything in between: a mixture (real components)
+            ◄─►  time shift = θ
+</pre>
+<p>The 3532-50 reports exactly these two numbers, <b>|Z| and θ</b>. Every other quantity in this program (Cs, Ls,
+Rp, D, Q, …) is <b>calculated</b> from |Z|, θ and the frequency f, with the same formulas the meter uses internally.</p>
+
+<h3>Impedance as an arrow (complex number)</h3>
+<p>It is convenient to draw |Z| and θ as an arrow. Its horizontal part is the <b>resistance R</b> (energy is lost as heat);
+its vertical part is the <b>reactance X</b> (energy is stored and returned every cycle).</p>
+<pre>
+      X (reactance, Ω)
+      ▲
+      │            ● Z = R + jX          inductive  : X &gt; 0, θ &gt; 0  (arrow points up)
+      │          ╱                       capacitive : X &lt; 0, θ &lt; 0  (arrow points down)
+      │   |Z|  ╱
+      │      ╱                           R = |Z|·cos θ
+      │    ╱  θ                          X = |Z|·sin θ
+      │  ╱ ⌒                             |Z| = √(R² + X²)
+      └──────────────────────►  R (resistance, Ω)
+</pre>
+<p>Engineers write this as <code>Z = R + jX</code>, where <code>j</code> marks the "vertical" part
+(mathematically j = √−1). You do not need complex numbers to use the program; they only make the formulas short.</p>
+<p>The frequency appears in almost every formula as the <b>angular frequency</b>:</p>
+<p class="eq">ω = 2π·f          (unit: rad/s;  f = 1 kHz  →  ω = 6283 rad/s)</p>
+
+<!-- ================================================================== -->
+<a name="ideal"></a>
+<h2>5. Ideal R, L and C <span class="lvl">BEGINNER</span></h2>
+<table border="1" cellpadding="5" cellspacing="0">
+<tr><th>Component</th><th>Symbol</th><th>Impedance</th><th>|Z|</th><th>θ</th><th>Behaviour with frequency</th></tr>
+<tr><td>Resistor R</td><td><code>──/\/\/──</code></td><td>Z = R</td><td>R</td><td>0°</td><td>constant</td></tr>
+<tr><td>Inductor L</td><td><code>───‿‿‿───</code></td><td>Z = jωL</td><td>ωL = 2πfL</td><td>+90°</td><td>rises with f (×10 per decade)</td></tr>
+<tr><td>Capacitor C</td><td><code>──┤├──</code></td><td>Z = 1/(jωC) = −j/(ωC)</td><td>1/(2πfC)</td><td>−90°</td><td>falls with f (÷10 per decade)</td></tr>
+</table>
+<h3>Worked examples</h3>
+<p class="eq">100 nF at 1 kHz:   |Z| = 1 / (2π · 1000 · 100·10⁻⁹) = 1592 Ω,  θ = −90°<br>
+100 nF at 100 kHz: |Z| = 15.9 Ω   (100× higher frequency → 100× lower impedance)<br>
+100 µH at 100 kHz: |Z| = 2π · 100000 · 100·10⁻⁶ = 62.8 Ω,  θ = +90°</p>
+<pre>
+  log |Z|
+     ▲  ╲ capacitor                          inductor ╱
+     │    ╲  (slope −1)                     (slope +1)╱
+     │      ╲                                       ╱
+     │────────╲─────────── resistor ──────────────╱───────
+     │          ╲                               ╱
+     │            ╲                           ╱
+     └──────────────────────────────────────────────────►  log f
+</pre>
+
+<!-- ================================================================== -->
+<a name="real"></a>
+<h2>6. Real components and self-resonance <span class="lvl">BEGINNER</span></h2>
+<p>Real parts are never ideal: every capacitor also has some resistance and inductance, every inductor some
+resistance and capacitance. These "parasitic" parts are what you usually want to measure.</p>
+
+<h3>Real capacitor</h3>
+<pre>
+                ESR          ESL            C
+     o───────/\/\/\/─────‿‿‿‿─────┬─────┤├─────┬───────o
+                                   │            │
+                                   └──/\/\/\/───┘
+                                       R_leak
+  ESR    = equivalent series resistance (electrodes, leads, dielectric loss)
+  ESL    = equivalent series inductance (leads, internal geometry; roughly 1 nH per mm of lead)
+  R_leak = leakage / insulation resistance (MΩ … GΩ at DC)
+</pre>
+<h3>Real inductor</h3>
+<pre>
+                DCR            L
+     o──┬────/\/\/\/─────‿‿‿‿‿─────┬──o        DCR   = winding (copper) resistance
+        │                           │           C_par = capacitance between the turns
+        └───────────┤├──────────────┘           + core losses for iron / ferrite cores
+                   C_par
+</pre>
+<h3>Self-resonance (SRF)</h3>
+<p>Because every part contains both an L and a C, there is always a frequency where their reactances cancel.
+This is the <b>self-resonant frequency</b>:</p>
+<p class="eq">f₀ = 1 / ( 2π · √(L · C) )</p>
+<ul>
+<li><b>Capacitor:</b> below f₀ it behaves like a capacitor (θ ≈ −90°); <b>at f₀ the phase crosses 0°</b> and |Z| has
+    its minimum, equal to the ESR; <b>above f₀ it behaves like an inductor</b> (θ &gt; 0).
+    Example: 100 nF with 30 nH of lead inductance → f₀ = 1/(2π√(30·10⁻⁹ · 100·10⁻⁹)) ≈ <b>2.9 MHz</b>.</li>
+<li><b>Inductor:</b> below f₀ inductive; at f₀ |Z| has a <i>maximum</i>; above f₀ it behaves like a capacitor.</li>
+</ul>
+<pre>
+  log |Z|            capacitor                               inductor
+     ▲  ╲                         ╱            ▲                  ╱╲
+     │    ╲                     ╱              │                ╱    ╲
+     │      ╲    capacitive   ╱ inductive      │   inductive  ╱        ╲  capacitive
+     │        ╲             ╱                  │            ╱            ╲
+     │          ╲_________╱  ← |Z| = ESR       │          ╱                ╲
+     └──────────────────●──────────► log f     └──────────────●───────────────► log f
+                        f₀                                    f₀
+     θ:  −90° ……………… 0° ……………… +90°             θ: +90° ……………… 0° ……………… −90°
+</pre>
+<p class="tip"><b>Practical meaning:</b> a value such as "Cs = −39 nF at 5 MHz" or "Ls negative" is <b>not an error</b>. It only
+means that you are above (or below) the self-resonance, where that equivalent circuit no longer describes the part.
+Look at θ: as long as θ is close to −90° the capacitance values are meaningful.</p>
+
+<!-- ================================================================== -->
+<a name="models"></a>
+<h2>7. Series and parallel equivalent circuits <span class="lvl">BEGINNER</span></h2>
+<p>From |Z| and θ the meter cannot know what is <i>inside</i> the part. It describes the part with the simplest
+circuit that gives the same |Z| and θ at that one frequency. There are two choices:</p>
+<pre>
+   SERIES model  ("s")                          PARALLEL model  ("p")
+
+   o──/\/\/\/──┤├── or ───‿‿‿───o              o──┬──/\/\/\/──┬──o
+        Rs        Cs        Ls                     │    Rp      │
+                                                   └──┤├ or ‿‿‿─┘
+   Z = Rs + jX                                          Cp    Lp
+                                                Y = 1/Z = G + jB
+</pre>
+<p>Both describe the <b>same</b> measurement; they are just two ways of writing it. They give (almost) the same
+C or L when the losses are small (D &lt; 0.1), and very different values when the losses are large.</p>
+<h3>Which one should I use?</h3>
+<table border="1" cellpadding="5" cellspacing="0">
+<tr><th>Situation</th><th>Use</th><th>Reason</th></tr>
+<tr><td>Low impedance (|Z| below about 100 Ω): large capacitors, small inductors, high frequencies</td>
+    <td><b>Series</b> (Cs, Ls, Rs)</td><td>the series resistance (ESR, leads) dominates the losses</td></tr>
+<tr><td>High impedance (|Z| above about 10 kΩ): small capacitors, large inductors, low frequencies</td>
+    <td><b>Parallel</b> (Cp, Lp, Rp)</td><td>the parallel leakage / dielectric loss dominates</td></tr>
+<tr><td>In between</td><td>whatever the datasheet / standard uses</td><td>both are correct; compare like with like</td></tr>
+<tr><td>Dielectric and material samples</td><td><b>Parallel</b> (Cp, D)</td><td>permittivity is defined from Cp</td></tr>
+</table>
+<h3>Converting between them</h3>
+<p class="eq">Cs = Cp · (1 + D²)        Cp = Cs / (1 + D²)<br>
+Ls = Lp · Q² / (1 + Q²)    Lp = Ls · (1 + 1/Q²)<br>
+Rp = Rs · (1 + Q²)         (Q = 1/D)</p>
+<p>Example from a real measurement: a 100 nF ceramic capacitor at 1 MHz had D = 1.2, which gave
+Cs = 102 nF but Cp = 42 nF. Both are "right"; at D = 1.2 the part is no longer a good capacitor
+at that frequency, so a single C value is not very meaningful.</p>
+
+<!-- ================================================================== -->
+<a name="params"></a>
+<h2>8. Every parameter explained <span class="lvl">BEGINNER</span></h2>
+<p>All values are calculated from |Z|, θ and f (ω = 2πf). Formulas, in the order of the plot selector:</p>
+<table border="1" cellpadding="4" cellspacing="0">
+<tr><th>Parameter</th><th>Unit</th><th>Formula</th><th>Meaning</th><th>Use it for</th></tr>
+<tr><td><b>|Z|</b></td><td>Ω</td><td>measured</td><td>impedance magnitude: "AC resistance"</td><td>everything; finding resonances (min or max)</td></tr>
+<tr><td><b>θ</b></td><td>°</td><td>measured</td><td>phase: −90° capacitive, 0° resistive, +90° inductive</td><td>checking what the part behaves like; SRF where θ = 0°</td></tr>
+<tr><td><b>Rs</b></td><td>Ω</td><td>|Z|·cos θ</td><td>series resistance (ESR of a capacitor, winding + core loss of an inductor)</td><td>ESR of capacitors, resistors, inductors</td></tr>
+<tr><td><b>X</b></td><td>Ω</td><td>|Z|·sin θ</td><td>reactance: &gt; 0 inductive, &lt; 0 capacitive</td><td>Nyquist plot, resonance</td></tr>
+<tr><td><b>Ls</b></td><td>H</td><td>X / ω</td><td>series inductance; <i>negative for capacitive parts</i></td><td>inductors (low |Z|), ESL above SRF</td></tr>
+<tr><td><b>Cs</b></td><td>F</td><td>−1 / (ω·X)</td><td>series capacitance; <i>negative for inductive parts</i></td><td>large capacitors, electrolytics, MLCCs</td></tr>
+<tr><td><b>Rp</b></td><td>Ω</td><td>1 / G</td><td>parallel (loss) resistance. <b>Not</b> the DC insulation resistance</td><td>high-impedance parts, dielectrics</td></tr>
+<tr><td><b>Lp</b></td><td>H</td><td>−1 / (ω·B)</td><td>parallel inductance</td><td>large inductors, transformers (high |Z|)</td></tr>
+<tr><td><b>Cp</b></td><td>F</td><td>B / ω</td><td>parallel capacitance</td><td>small capacitors, dielectric materials, sensors</td></tr>
+<tr><td><b>|Y|</b></td><td>S</td><td>1 / |Z|</td><td>admittance: how easily current flows</td><td>parallel circuits, conductivity</td></tr>
+<tr><td><b>G</b></td><td>S</td><td>cos θ / |Z|</td><td>conductance (real part of Y)</td><td>AC conductivity of materials</td></tr>
+<tr><td><b>B</b></td><td>S</td><td>−sin θ / |Z|</td><td>susceptance (imaginary part of Y)</td><td>parallel circuits</td></tr>
+<tr><td><b>D</b></td><td>–</td><td>|Rs / X| = |G / B|</td><td>dissipation factor = tan δ = loss per stored energy; δ = 90° − |θ|</td><td>capacitor quality, dielectric loss (small = good)</td></tr>
+<tr><td><b>Q</b></td><td>–</td><td>|X / Rs| = 1 / D</td><td>quality factor</td><td>inductors and resonators (large = good)</td></tr>
+<tr><td>Z_std, θ_std</td><td>Ω, °</td><td>statistics</td><td>standard deviation when "Readings / point" &gt; 1</td><td>error bars, repeatability</td></tr>
+<tr><td>Z_raw, θ_raw</td><td>Ω, °</td><td>measured</td><td>reading before the open/short correction</td><td>checking the calibration</td></tr>
+</table>
+
+<h3>Why does Rp fall with frequency for a capacitor?</h3>
+<p>Because Rp is not a fixed resistor but a way of expressing the loss: </p>
+<p class="eq">Rp = 1 / (ω · C · D)</p>
+<p>Even with constant C and D, Rp falls by 10× for every 10× in frequency. This is normal. The DC leakage
+resistance (GΩ) can only be measured with an insulation tester at DC.</p>
+
+<h3>Typical good values</h3>
+<table border="1" cellpadding="4" cellspacing="0">
+<tr><th>Part</th><th>D at 1 kHz</th><th>Remarks</th></tr>
+<tr><td>Film capacitor (polypropylene)</td><td>≈ 0.0002 – 0.001</td><td>very low loss</td></tr>
+<tr><td>C0G / NP0 ceramic (class 1)</td><td>≤ 0.001</td><td>stable with voltage and temperature</td></tr>
+<tr><td>X7R / X5R ceramic (class 2)</td><td>≤ 0.025 (typ.)</td><td>C depends on voltage, temperature and age</td></tr>
+<tr><td>Y5V / Z5U ceramic (class 2)</td><td>≤ 0.05 – 0.07 (typ.)</td><td>strong voltage and temperature dependence</td></tr>
+<tr><td>Aluminium electrolytic</td><td>0.05 – 0.3 (usually specified at 120 Hz)</td><td>large ESR; check polarity and DC rating</td></tr>
+</table>
+<p>Always check the datasheet of your part: tolerances and limits differ between manufacturers.</p>
+
+<!-- ================================================================== -->
+<a name="conn"></a>
+<h2>9. Connections: the 4-terminal method <span class="lvl">BEGINNER</span></h2>
+<h3>The problem with two wires</h3>
+<p>If you connect a part with just two wires, the meter measures the part <b>plus both wires</b>:</p>
+<pre>
+   meter o───── lead 0.1 Ω ─────┐
+                                [ 1 Ω sample ]     the meter sees 1.2 Ω instead of 1 Ω  →  20 % error
+   meter o───── lead 0.1 Ω ─────┘
+</pre>
+<h3>The solution: separate wires for current and voltage (Kelvin connection)</h3>
+<pre>
+   METER                              cables                       FIXTURE
+
+   H CUR ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓  current goes in
+                                                          ┣━━━━━━┓
+   H POT ●────────────────────────────────────────────────┛      ┃
+                                                               ┌─┴─┐
+                                                               │DUT│   DUT = device under test
+                                                               └─┬─┘         (your sample)
+   L POT ●────────────────────────────────────────────────┓      ┃
+                                                          ┣━━━━━━┛
+   L CUR ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛  current comes back
+
+   GUARD ●· · · · · · · · · · · · · · · · · · · · · · · · · · · ·  shield / guard of the fixture (⏚)
+
+   ━━━  current path (H CUR → sample → L CUR, where the current is measured)
+   ───  voltage sensing (H POT and L POT measure the voltage right at the sample)
+</pre>
+<ul>
+<li><b>H CUR</b> (high, current): the meter's AC source pushes the test current out.</li>
+<li><b>L CUR</b> (low, current): the current comes back here and is measured.</li>
+<li><b>H POT and L POT</b> (potential): measure the voltage <i>directly at the sample</i>. They draw almost no current,
+    so the resistance of their wires does not matter.</li>
+<li><b>GUARD</b>: connected to the meter's ground. It goes to the shield of the fixture or cables and catches stray
+    currents that would otherwise flow around the sample (important for small pF capacitances and high MΩ impedances).</li>
+</ul>
+<p><b>Rule:</b> H CUR and H POT meet at <b>one</b> side of the sample, L CUR and L POT at the <b>other</b> side, as close to
+the sample as possible. On the usual 4-terminal fixture: <b>red jacks = H side, blue jacks = L side,
+cyan/green jack = guard</b>. Check the labels of your fixture.</p>
+
+<h3>Good cabling, step by step</h3>
+<ol>
+<li>Use the <b>shortest</b> cables you can. Best is a fixture that plugs <b>directly</b> into the four BNC connectors.</li>
+<li><b>Twist or bundle</b> H CUR with H POT, and L CUR with L POT, and run the two pairs side by side.
+    Open loops act like antennas and add inductance (≈ 1 µH per metre of loose loop).</li>
+<li>Connect the <b>GUARD</b> to the fixture's guard jack (a BNC-to-banana adapter may be needed).</li>
+<li><b>Tape the cables down.</b> If they move after calibration, the calibration is no longer accurate.</li>
+<li>Insert component leads so that the <b>body is as close to the contacts as possible</b>.</li>
+<li>Keep hands, metal tools and other cables away from the sample during the measurement.</li>
+</ol>
+<p class="tip"><b>How to see if your cabling is good:</b> after calibrating, look at the SHORT values in the calibration file
+(or the log). A good short is a few tens of mΩ and some tens of nH. Long loose leads show up as about 0.2 Ω and
+0.3 µH or more, and limit accuracy above about 100 kHz.</p>
+
+<!-- ================================================================== -->
+<a name="cal"></a>
+<h2>10. Fixture calibration (open / short) <span class="lvl">BEGINNER</span></h2>
+<h3>Why calibrate?</h3>
+<p>Even with a 4-terminal connection, the fixture and the last few centimetres of wire add their own small
+impedance. Two effects matter:</p>
+<pre>
+                 Zs  (contacts + leads: small R and L in series)
+     H ●───────/\/\/───‿‿‿─────┬──────────────┬──────● H
+                                │              │
+                               Yo            [DUT]
+                    (stray C and leakage       │
+                     between the contacts)     │
+     L ●────────────────────────┴──────────────┴──────● L
+
+     meter side                                   sample side
+</pre>
+<ul>
+<li><b>Zs (series residual)</b> adds to every reading. It matters for <b>low impedances</b>: large capacitors,
+    small inductors, small resistors, and everything at high frequency.</li>
+<li><b>Yo (stray admittance)</b> is a small capacitance (typically 1–20 pF) across the sample. It matters for
+    <b>high impedances</b>: small capacitors, large resistors, low frequencies.</li>
+</ul>
+<h3>How the app measures them</h3>
+<ol>
+<li><b>OPEN</b>: fixture empty → the meter sees only Zs + 1/Yo → gives Yo.</li>
+<li><b>SHORT</b>: fixture terminals connected directly together → the meter sees only Zs.</li>
+</ol>
+<p>Then every reading of the sample, Zm, is corrected point by point:</p>
+<p class="eq">Zs   = Z_short<br>
+Yo   = 1 / (Z_open − Z_short)<br>
+Zdut = (Zm − Zs) / (1 − (Zm − Zs) · Yo)</p>
+<h3>Doing it right</h3>
+<ul>
+<li><b>No sample in the fixture</b> during either step.</li>
+<li><b>OPEN</b>: contacts apart, not touching anything; the same spacing the sample leads will have.</li>
+<li><b>SHORT</b>: a short, thick piece of wire (or the shorting bar) clamped <b>at the same positions</b> where the
+    sample leads go. Do not just touch the clips together.</li>
+<li>Use the <b>same frequency range, number of points and test level</b> that you will use for the measurement.
+    The app does this automatically from sections 2 and 3, and warns you when they no longer match.</li>
+<li>Calibrate again after moving cables, changing the fixture, or after a long time / large temperature change.</li>
+<li>Use either this software calibration <b>or</b> the meter's front-panel OPEN/SHORT compensation, not both.</li>
+</ul>
+<p>The calibration is saved as a JSON file in <code>LCR_data\calibration\</code> and loaded again when the program starts.
+The CSV of every measurement records which calibration file was used.</p>
+<p class="tip"><b>Check:</b> the column <code>Z_raw_ohm</code> holds the reading before correction. If raw and corrected values are
+almost the same, the fixture effects were negligible for that sample; if they differ a lot (typically above 1 MHz
+or for very small/large impedances), the calibration was essential.</p>
+
+<!-- ================================================================== -->
+<a name="signal"></a>
+<h2>11. Test signal and measurement settings <span class="lvl">BEGINNER</span></h2>
+<h3>Level type</h3>
+<pre>
+  V  (open-circuit voltage)            CV (constant voltage)             CC (constant current)
+
+   ┌─────┐  R_out                       meter adjusts the source         meter adjusts the source
+   │  ~  ├──/\/\/──┬──●                 until the voltage AT THE         until the current THROUGH
+   │  V  │         │                    SAMPLE equals the set value      THE SAMPLE equals the set value
+   └──┬──┘       [DUT]
+      └────────────┴──●
+  set value = source voltage; the
+  sample sees less when its |Z| is small
+</pre>
+<table border="1" cellpadding="4" cellspacing="0">
+<tr><th>Mode</th><th>What it does</th><th>Use it for</th></tr>
+<tr><td><b>V</b></td><td>sets the source voltage; the voltage at the sample depends on its impedance</td>
+    <td>general measurements; resistors, film / C0G capacitors, air-core inductors; parts whose value does not depend on the level</td></tr>
+<tr><td><b>CV</b></td><td>keeps the voltage across the sample constant at every frequency</td>
+    <td>voltage-dependent parts: class 2 ceramic capacitors (X7R, Y5V), electrolytics, dielectric materials, sensors; comparing with datasheets (usually 1 V at 1 kHz, or 0.5 V at 120 Hz for large capacitors)</td></tr>
+<tr><td><b>CC</b></td><td>keeps the current through the sample constant</td>
+    <td>current-dependent parts: inductors with iron or ferrite cores, chokes, transformers (use the datasheet test current); very low impedances</td></tr>
+</table>
+<h3>Level value: allowed range</h3>
+<table border="1" cellpadding="4" cellspacing="0">
+<tr><th>Mode</th><th>up to 1 MHz</th><th>above 1 MHz</th></tr>
+<tr><td>V / CV</td><td>10 mV … 5 V</td><td>50 mV … 1 V</td></tr>
+<tr><td>CC</td><td>10 µA … 100 mA</td><td>50 µA … 20 mA</td></tr>
+</table>
+<p>1 V is the usual choice. Use 10–100 mV for sensitive or non-linear samples (semiconductors, electrochemical
+or biological samples), and higher levels only on purpose (e.g. to study voltage dependence).</p>
+<h3>Speed</h3>
+<table border="1" cellpadding="4" cellspacing="0">
+<tr><th>Speed</th><th>Time per reading</th><th>Use it for</th></tr>
+<tr><td>FAST</td><td>≈ 5 ms</td><td>quick overview, many points, locating a resonance</td></tr>
+<tr><td>NORMAL</td><td>≈ 21 ms</td><td>everyday measurements</td></tr>
+<tr><td>SLOW</td><td>≈ 72 ms</td><td>noisy readings; very high (MΩ) or very low (&lt; 1 Ω) impedances</td></tr>
+<tr><td>SLOW2</td><td>≈ 140 ms</td><td>best accuracy: low-loss parts (small D), dielectrics, results for publication</td></tr>
+</table>
+<h3>Other settings</h3>
+<ul>
+<li><b>Averaging (meter)</b>: the meter averages N readings; noise drops by about √N, time rises N×.
+    1 for normal work, 4–16 with SLOW2 for precise work.</li>
+<li><b>Settling delay</b>: waiting time after each frequency change. 50 ms normally; 100–200 ms for large
+    capacitors, low frequencies (&lt; 100 Hz), high impedances and dielectrics.</li>
+<li><b>Readings / point</b>: the program measures each frequency N times and stores mean and standard deviation
+    (Z_std, θ_std). Use 3–10 when you need error bars.</li>
+<li><b>Trigger each point (*TRG)</b>: guarantees that every stored value is a fresh reading taken after the
+    frequency change. Keep it on.</li>
+</ul>
+<p class="warn">Changing the level type or level value means you must <b>calibrate again</b>.</p>
+
+<!-- ================================================================== -->
+<a name="sweep"></a>
+<h2>12. Frequency sweep settings <span class="lvl">BEGINNER</span></h2>
+<ul>
+<li><b>Range:</b> 42 Hz … 5 MHz. Enter values with SI prefixes: <code>42</code>, <code>120</code>, <code>1k</code>,
+    <code>2.5k</code>, <code>1M</code>, <code>5M</code>.</li>
+<li><b>Logarithmic</b> spacing (recommended): equal number of points per decade. Impedance changes by factors of
+    10, so this shows everything evenly.</li>
+<li><b>Linear</b>: equal steps in Hz. Useful only for a narrow range, e.g. around a resonance (1.0 – 1.2 MHz).</li>
+<li><b>Custom list</b>: exactly the frequencies you type, e.g. the standard test frequencies
+    <code>100, 120, 1k, 10k, 100k, 1M</code>.</li>
+<li><b>Points:</b> 11–21 for a quick look, 51 for normal work, 101–201 for smooth curves or sharp resonances.</li>
+<li>The estimated time under the Start button is a rough guide; auto-ranging and the settling delay usually add
+    0.2–0.6 s per point.</li>
+</ul>
+
+<!-- ================================================================== -->
+<a name="recipes"></a>
+<h2>13. Recipes for common measurements <span class="lvl">BEGINNER</span></h2>
+<table border="1" cellpadding="4" cellspacing="0">
+<tr><th>Sample</th><th>Level</th><th>Speed / avg.</th><th>Settling</th><th>Plot</th><th>Notes</th></tr>
+<tr><td>Any part, quick check</td><td>V, 1 V</td><td>FAST / 1</td><td>20 ms</td><td>|Z|, θ</td><td>shows what the part is and where it resonates</td></tr>
+<tr><td>Ceramic capacitor</td><td>CV, 1 V</td><td>NORMAL / 1–4</td><td>50–100 ms</td><td>Cs, D</td><td>class 2 values depend on voltage, temperature and age</td></tr>
+<tr><td>Film or C0G capacitor</td><td>CV, 1 V</td><td>SLOW2 / 8–16</td><td>100 ms</td><td>Cs or Cp, D</td><td>D is tiny; needs a good calibration</td></tr>
+<tr><td>Electrolytic capacitor</td><td>CV, 0.5 V</td><td>NORMAL / 4</td><td>100–200 ms</td><td>Cs, Rs (ESR)</td><td>datasheets specify C at 120 Hz, ESR at 100 kHz; discharge first</td></tr>
+<tr><td>Inductor, ferrite core</td><td>CC, datasheet current</td><td>NORMAL / 1–4</td><td>50 ms</td><td>Ls, Q</td><td>L depends on current</td></tr>
+<tr><td>Air-core inductor</td><td>V, 1 V</td><td>NORMAL</td><td>50 ms</td><td>Ls, Q</td><td>SRF visible as |Z| maximum</td></tr>
+<tr><td>Resistor</td><td>V, 1 V</td><td>NORMAL</td><td>50 ms</td><td>Rs (low R) or Rp (high R), θ</td><td>θ shows parasitic L (θ &gt; 0) or C (θ &lt; 0)</td></tr>
+<tr><td>Dielectric / material</td><td>CV, 1 V</td><td>SLOW2 / 4–16</td><td>100–200 ms</td><td>Cp, D; Nyquist</td><td>3 readings / point for error bars; see section 18</td></tr>
+<tr><td>Sensitive / non-linear</td><td>CV, 10–50 mV</td><td>SLOW / 4–8</td><td>100 ms</td><td>depends</td><td>low level avoids changing the sample</td></tr>
+</table>
+<h3>Example: checking a capacitor against its datasheet</h3>
+<ol>
+<li>Datasheet test condition is typically <b>1 kHz, 1 Vrms</b> (class 2 ceramic) → custom list including 1k, CV 1 V.</li>
+<li>Calibrate, insert, sweep.</li>
+<li>Read Cs and D at 1 kHz from the Data table tab. Compare: capacitance within tolerance
+    (e.g. ±10 % = K, ±20 % = M), D below the limit.</li>
+<li>For a 100 nF X7R-type ceramic, about 100–110 nF and D ≈ 0.02 at 1 kHz is typical.</li>
+</ol>
+
+<!-- ================================================================== -->
+<a name="plots"></a>
+<h2>14. Reading the plots <span class="lvl">BEGINNER</span></h2>
+<ul>
+<li>Choose the parameter of each of the two plots with <b>Y axis</b>. <b>log f</b> and <b>log y</b> switch logarithmic
+    axes; <b>|y|</b> plots the absolute value (needed for a log scale of negative quantities like X).</li>
+<li>Tick several runs in the <b>Runs</b> list to overlay them (compare samples, levels, before / after calibration).
+    Old CSV files can be loaded with <b>Load CSV…</b>.</li>
+<li>The line under the plots shows all main values of the last point.</li>
+</ul>
+<h3>Typical shapes</h3>
+<table border="1" cellpadding="4" cellspacing="0">
+<tr><th>What you see</th><th>What it means</th></tr>
+<tr><td>|Z| falling with slope −1 (÷10 per decade), θ ≈ −90°</td><td>capacitive region</td></tr>
+<tr><td>|Z| rising with slope +1, θ ≈ +90°</td><td>inductive region</td></tr>
+<tr><td>|Z| flat, θ ≈ 0°</td><td>resistive (or at a resonance)</td></tr>
+<tr><td>V-shaped |Z| with minimum, θ crossing 0° upwards</td><td>series resonance (capacitor SRF); minimum = ESR</td></tr>
+<tr><td>peak in |Z|, θ crossing 0° downwards</td><td>parallel resonance (inductor SRF)</td></tr>
+<tr><td>Cs constant then drifting up near the top of the range</td><td>approaching the SRF (lead inductance)</td></tr>
+<tr><td>D rising steadily with f</td><td>ESR dominates: D = ω·C·ESR</td></tr>
+<tr><td>D rising towards low f</td><td>leakage or conduction (dielectrics, electrolytics)</td></tr>
+</table>
+<h3>Nyquist plot (Z′ vs −Z″)</h3>
+<p>Each point is the impedance arrow of one frequency: Z′ = Rs (horizontal), −Z″ = −X (vertical). Capacitive
+behaviour is plotted upwards.</p>
+<pre>
+  −Z″ ▲                                     ideal capacitor : vertical line on the axis
+      │        . ─ ─ .   ← top at ω = 1/(R·C)  series R + C   : vertical line at Z′ = R
+      │     .           .                   parallel R ‖ C : semicircle of diameter R
+      │   .               .                 two semicircles: two processes (e.g. grain
+      │  .                 .                                 and grain boundary)
+      └──●─────────────────●──────►  Z′     points below the axis: inductive
+        high f            low f  (=R)
+</pre>
+
+<!-- ================================================================== -->
+<a name="files"></a>
+<h2>15. Data files <span class="lvl">BEGINNER</span></h2>
+<ul>
+<li>With <b>Auto-save every point to CSV</b> ticked, each point is written as soon as it is measured.
+    Nothing is lost if the PC crashes.</li>
+<li>Location: the <b>Data folder</b> (default <code>C:\Users\&lt;you&gt;\LCR_data</code>), name
+    <code>YYYYMMDD_HHMMSS_&lt;sample&gt;_&lt;operator&gt;_T&lt;test no&gt;.csv</code>.</li>
+<li><b>File → Export all runs to Excel…</b>: one sheet per run plus an Info sheet.
+    <b>File → Save plots as image…</b>: PNG files of both plots and the Nyquist plot.</li>
+</ul>
+<h3>CSV layout</h3>
+<pre>
+# sample: C100nF                     ← metadata lines start with #
+# operator: Arshad
+# test_number: 3
+# level_mode: CV
+# compensation: open+short (… file …\calibration\20261123_181957_open_short.json)
+…
+index,freq_set_Hz,freq_Hz,Z_ohm,theta_deg,Rs_ohm,X_ohm,Ls_H,Cs_F,Rp_ohm,Lp_H,Cp_F,Y_S,G_S,B_S,D,Q,
+      Z_std,theta_std,Z_raw_ohm,theta_raw_deg,timestamp
+0,100,100,15920.2,-89.98,…
+</pre>
+<p>Reading the data in Python:</p>
+<pre>
+import pandas as pd
+df = pd.read_csv("20261123_181057_C100nF_Arshad_T3.csv", comment="#")
+df.plot(x="freq_Hz", y="Cs_F", logx=True)
+</pre>
+<p>In Excel: open the CSV directly (the # lines appear at the top). In Origin: import as CSV with "#" as comment
+character.</p>
+
+<!-- ================================================================== -->
+<a name="accuracy"></a>
+<h2>16. Accuracy and good practice <span class="lvl">BEGINNER</span></h2>
+<ul>
+<li>The meter is most accurate for <b>medium impedances</b> (roughly 10 Ω … 100 kΩ). Very small (&lt; 1 Ω) and
+    very large (&gt; 10 MΩ) impedances, and frequencies above 1 MHz, are harder: use SLOW2, averaging,
+    a good calibration and short, guarded cables.</li>
+<li>Low-loss parts: the accuracy of <b>D</b> is limited (roughly ±0.001 under good conditions). A measured
+    D of 0.0005 may really be anything from 0 to 0.0015.</li>
+<li><b>Temperature</b> changes many parts (class 2 ceramics by several % between 20 and 30 °C). Note the
+    temperature in the Temperature field.</li>
+<li><b>Class 2 ceramics age</b>: their capacitance drops by about 1–2 % per decade of time after they were last
+    heated (e.g. soldered). Results can differ from day to day.</li>
+<li><b>Repeatability check:</b> measure the same sample 3 times, removing and re-inserting it in between.
+    The spread shows how much of the result is contact and handling, not the part.</li>
+<li>Let the meter warm up for at least 30–60 minutes before precise measurements.</li>
+</ul>
+
+<!-- ================================================================== -->
+<a name="trouble"></a>
+<h2>17. Troubleshooting</h2>
+<table border="1" cellpadding="4" cellspacing="0">
+<tr><th>Problem</th><th>Likely cause</th><th>What to do</th></tr>
+<tr><td>"No VISA resources found"</td><td>VISA library or adapter driver missing; adapter unplugged</td><td>check the KUSB-488A driver and VISA (Keithley KI-VISA or NI-VISA); try the interface "GPIB-32 DLL"</td></tr>
+<tr><td>Connect fails / timeout</td><td>wrong address, cable, meter off</td><td>check the GPIB address in the meter's interface settings; try GPIB1 instead of GPIB0; <b>Scan</b></td></tr>
+<tr><td>Values jump or are noisy</td><td>noise pick-up, moving cables, poor contact</td><td>connect GUARD, fix cables, clean contacts; SLOW / SLOW2, averaging</td></tr>
+<tr><td>Empty cells (overflow)</td><td>impedance outside the meter's range (e.g. open fixture at low f)</td><td>normal for an open fixture; for samples, change the frequency range</td></tr>
+<tr><td>Negative Cs or Ls, D &gt; 1</td><td>above / below the self-resonance</td><td>not an error; choose the right parameter (section 6)</td></tr>
+<tr><td>Phase beyond ±90° or negative D after calibration</td><td>bad calibration (sample present during OPEN, poor SHORT, cables moved)</td><td>calibrate again carefully</td></tr>
+<tr><td>Capacitance rises strongly towards the top frequency</td><td>lead inductance, near SRF</td><td>shorter / twisted cables; calibrate; push the part closer to the contacts</td></tr>
+<tr><td>"Calibration does not match"</td><td>frequencies or level changed after calibrating</td><td>click <b>Calibrate again</b></td></tr>
+<tr><td>Result differs from the datasheet</td><td>different test conditions</td><td>use the datasheet frequency, level (CV), temperature; class 2 ceramics: voltage and age</td></tr>
+<tr><td>Sweep is slow</td><td>auto-ranging, settling delay, SLOW speeds</td><td>FAST / NORMAL, fewer points, shorter settling</td></tr>
+<tr><td>"Command rejected" messages</td><td>meter firmware uses a different command</td><td>Tools → Verify command profile; edit the JSON profile (section 18)</td></tr>
+</table>
+
+<!-- ================================================================== -->
+<a name="advanced"></a>
+<h2>18. Advanced topics <span class="adv">ADVANCED</span></h2>
+
+<h3>18.1 Derivation of the parameters</h3>
+<p>With the measured phasor Z = |Z|·e<sup>jθ</sup>:</p>
+<p class="eq">Z  = Rs + jX       Rs = |Z| cos θ,   X = |Z| sin θ<br>
+Y  = 1/Z = G + jB  G = cos θ / |Z|,  B = −sin θ / |Z|<br>
+X  = ωLs = −1/(ωCs)   →   Ls = X/ω,   Cs = −1/(ωX)<br>
+B  = ωCp = −1/(ωLp)   →   Cp = B/ω,   Lp = −1/(ωB)<br>
+D  = tan δ = |Rs/X| = |G/B| = |cot θ|,   Q = 1/D,   δ = 90° − |θ|</p>
+<p>D is the same in both models because Rs/X and G/B are both equal to cot θ.</p>
+
+<h3>18.2 Open/short correction in detail</h3>
+<p>The fixture is modelled as a series impedance Zs followed by a shunt admittance Yo (an "L-network"):</p>
+<p class="eq">Zm = Zs + 1 / (Yo + 1/Zdut)<br>
+SHORT (Zdut = 0):  Z_short = Zs<br>
+OPEN  (Zdut = ∞):  Z_open  = Zs + 1/Yo   →   Yo = 1/(Z_open − Z_short)<br>
+solve for Zdut:    Zdut = (Zm − Zs) / (1 − (Zm − Zs)·Yo)</p>
+<p>The correction is applied to the complex mean of each point. If the OPEN reading overflowed at some frequency
+(typically below 100 Hz), Yo is taken as 0 there, which is correct because the stray admittance is then negligible.
+A third standard (LOAD correction with a known reference part) would also remove gain and phase errors of the
+cables; it is not implemented.</p>
+
+<h3>18.3 Dielectric and material measurements</h3>
+<p>For a flat sample of thickness d between parallel electrodes of area A:</p>
+<p class="eq">C₀   = ε₀ · A / d          (empty-capacitor value; ε₀ = 8.854·10⁻¹² F/m)<br>
+ε′   = Cp / C₀ = Cp · d / (ε₀ · A)   (relative permittivity, real part)<br>
+ε″   = ε′ · D                      (loss part)<br>
+σ_ac = ω · ε₀ · ε″                  (AC conductivity, S/m)<br>
+M*   = 1/ε*  (electric modulus: M′ = ε′/(ε′²+ε″²),  M″ = ε″/(ε′²+ε″²))</p>
+<ul>
+<li>Use <b>Cp and D</b> (parallel model), CV mode, SLOW2 and averaging.</li>
+<li>Edge (fringe) fields make C larger than ε₀A/d predicts, especially when d is not much smaller than the
+    electrode size. A guard-ring electrode or a correction for the edge capacitance improves accuracy.</li>
+<li>Good contact matters: sputtered or painted electrodes are much better than pressure contacts.</li>
+<li>A Debye relaxation shows up as a step in ε′, a peak in ε″ (and D) at f = 1/(2πτ), and a semicircle in the
+    Nyquist or Cole-Cole (ε″ vs ε′) plot. Conduction shows as ε″ rising as 1/f towards low frequencies.
+    The simulator has a "Dielectric sample (Debye relaxation)" model to practise with.</li>
+</ul>
+
+<h3>18.4 Impedance spectroscopy and equivalent-circuit fitting</h3>
+<p>The CSV contains everything needed to fit equivalent circuits in external software
+(e.g. Python <code>impedance.py</code>, ZView, EC-Lab): use <code>freq_Hz</code>, <code>Rs_ohm</code> (Z′) and
+<code>X_ohm</code> (Z″). For electrochemical systems, use a low CV level (10 mV) so that the response stays
+linear. This program applies no DC bias, so electrochemical cells are measured at their open-circuit
+state.</p>
+
+<h3>18.5 How the program talks to the meter</h3>
+<p>The program uses GPIB through the Keithley KUSB-488A adapter, either via VISA (resource
+<code>GPIB0::1::INSTR</code>) or by calling <code>gpib-32.dll</code> directly. One sweep point is:</p>
+<pre>
+:FREQuency 1.00000E+03      set the frequency
+(settling delay)
+*TRG                        trigger one fresh measurement (external trigger mode)
+:MEASure?                   →  1.2552E+07,-87.45      (|Z| in Ω, θ in degrees)
+</pre>
+<p>At the start of a sweep the program sends <code>:HEADer OFF</code>, <code>:MEASure:ITEM 5,0</code> (return |Z| and θ),
+<code>:RANGe:AUTO ON</code>, speed, averaging, level and <code>:TRIGger EXTernal</code>; at the end
+<code>:TRIGger INTernal</code> returns the meter to free-running mode.</p>
+<ul>
+<li>All command strings are in <code>lcr_app\instrument\commands_3532_50.json</code>
+    (<b>Tools → Open command profile</b>). After editing, use <b>Tools → Reload command profile</b>.</li>
+<li><b>Tools → Verify command profile on meter</b> sends every command and reads the error register
+    (<code>*ESR?</code>); a FAIL means the meter rejected that command.</li>
+<li>The <b>GPIB console</b> tab sends any command by hand. Commands ending with <code>?</code> are queries and show the answer.
+    Tick "Log all GPIB traffic" to see every command the program sends.</li>
+<li>The <b>Simulator</b> interface imitates a 3532-50 with selectable test components, for training without
+    hardware.</li>
+</ul>
+
+<h3>18.6 Speed versus quality</h3>
+<p>Time per point ≈ settling delay + readings/point × (averaging × measuring time + GPIB and auto-range overhead).
+Auto-ranging adds the most when |Z| changes a lot between points. For long series of identical samples, a
+custom frequency list with only the frequencies you need is the fastest option.</p>
+
+<!-- ================================================================== -->
+<a name="glossary"></a>
+<h2>19. Glossary</h2>
+<table border="1" cellpadding="4" cellspacing="0">
+<tr><td><b>AC</b></td><td>alternating current/voltage; here a sine wave of the chosen frequency</td></tr>
+<tr><td><b>Admittance Y</b></td><td>1/Z, in siemens (S); G + jB</td></tr>
+<tr><td><b>Conductance G</b></td><td>real part of Y; the "loss" part in the parallel model</td></tr>
+<tr><td><b>D, tan δ</b></td><td>dissipation factor: energy lost per energy stored; small = low loss</td></tr>
+<tr><td><b>DUT</b></td><td>device under test, the sample</td></tr>
+<tr><td><b>ESL</b></td><td>equivalent series inductance of a capacitor</td></tr>
+<tr><td><b>ESR</b></td><td>equivalent series resistance of a capacitor (= Rs)</td></tr>
+<tr><td><b>Guard</b></td><td>grounded shield that diverts stray currents away from the measurement</td></tr>
+<tr><td><b>Impedance Z</b></td><td>AC opposition to current, |Z| and θ, or R + jX; in ohms</td></tr>
+<tr><td><b>Kelvin / 4-terminal</b></td><td>separate wires for current and for voltage sensing</td></tr>
+<tr><td><b>Phase θ</b></td><td>time shift between current and voltage, in degrees</td></tr>
+<tr><td><b>Q</b></td><td>quality factor = 1/D; large = low loss (inductors, resonators)</td></tr>
+<tr><td><b>Reactance X</b></td><td>imaginary part of Z; positive inductive, negative capacitive</td></tr>
+<tr><td><b>rms</b></td><td>root-mean-square; the "effective" value of an AC signal (1 V rms = 1.414 V peak for a sine)</td></tr>
+<tr><td><b>SRF, f₀</b></td><td>self-resonant frequency where the part's L and C cancel (θ = 0°)</td></tr>
+<tr><td><b>Susceptance B</b></td><td>imaginary part of Y</td></tr>
+<tr><td><b>VISA / GPIB</b></td><td>the software layer and the cable bus used to talk to the meter</td></tr>
+</table>
+<p><a href="#top">↑ Back to the top</a></p>
+</body>
+</html>

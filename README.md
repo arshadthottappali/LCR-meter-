@@ -30,6 +30,10 @@ The app also has:
 * File names with date, time, sample, operator and test number, e.g. `20261123_181057_C100nF_Arshad_T3.csv`.
 * A **GPIB console** for typing any command by hand.
 * A **simulator** for trying the app without the meter.
+* A built-in **user manual** (tab *Help / Manual*, or press **F1**), from beginner to advanced: what impedance and
+  every parameter mean, equations and circuit diagrams, the 4-terminal connection, calibration, settings,
+  recipes for common parts, reading the plots, troubleshooting and dielectric analysis. It can also be opened in a
+  web browser for printing ([`lcr_app/help/manual.html`](lcr_app/help/manual.html)).
 
 ## 1. Hardware setup
 
