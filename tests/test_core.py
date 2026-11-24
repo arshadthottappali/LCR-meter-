@@ -68,6 +68,30 @@ def test_sweep_with_simulator(tmp_path):
     assert back.rows[3]["Cs"] == pytest.approx(pts[3].values["Cs"], rel=1e-6)
 
 
+def test_overflow_with_several_readings_per_point():
+    """Open fixture at low frequency: the meter overflows (NaN). With readings_per_point > 1
+    this used to crash with 'inf or nan encountered in data' (statistics.stdev)."""
+
+    class Overflowing(Hioki3532):
+        calls = 0
+
+        def measure_z_theta(self):
+            Overflowing.calls += 1
+            if self.t.freq < 1000:  # always overflow
+                return math.nan, math.nan
+            if Overflowing.calls % 3 == 0:  # occasional overflow near the range limit
+                return math.nan, math.nan
+            return 1e6, -89.0
+
+    meter = Overflowing(SimulatedTransport(realtime=False))
+    cfg = SweepConfig(start_hz=100, stop_hz=100e3, points=5, settle_ms=0, readings_per_point=3,
+                      meas=MeasureSettings())
+    pts = SweepRunner(meter, cfg).run()
+    assert len(pts) == 5
+    assert math.isnan(pts[0].z_raw) and math.isnan(pts[0].z_std)
+    assert pts[-1].z_raw == pytest.approx(1e6)
+
+
 def test_verify_profile_on_simulator():
     meter = Hioki3532(SimulatedTransport(realtime=False))
     res = meter.verify_profile(MeasureSettings())

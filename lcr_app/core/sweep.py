@@ -115,8 +115,12 @@ class SweepRunner:
                     ths.append(th)
                 if not zs:
                     break
-                z_raw = statistics.fmean(zs)
-                th_raw = statistics.fmean(ths)
+                # overflow readings are NaN: use only the valid ones (statistics.stdev raises on NaN)
+                pairs = [(a, b) for a, b in zip(zs, ths) if math.isfinite(a) and math.isfinite(b)]
+                zs = [a for a, _ in pairs]
+                ths = [b for _, b in pairs]
+                z_raw = statistics.fmean(zs) if zs else math.nan
+                th_raw = statistics.fmean(ths) if ths else math.nan
                 z, th = self.comp.correct(i, f, z_raw, th_raw) if self.comp else (z_raw, th_raw)
                 p = Point(
                     index=i,
