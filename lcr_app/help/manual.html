@@ -1,69 +1,153 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LCR Sweep: User manual</title>
 <style>
-body  { font-family: "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #1a1a1a; }
-h1    { font-size: 18pt; color: #0b3d6e; }
-h2    { font-size: 14pt; color: #0b3d6e; margin-top: 22px; border-bottom: 1px solid #9db4cc; }
-h3    { font-size: 11.5pt; color: #174f86; margin-top: 14px; }
-pre   { font-family: Consolas, "Courier New", monospace; font-size: 9.5pt; background-color: #f3f6f9;
-        border: 1px solid #d0dae4; padding: 6px; }
-code  { font-family: Consolas, "Courier New", monospace; background-color: #f0f0f0; }
-.eq   { font-family: Consolas, "Courier New", monospace; font-size: 10pt; background-color: #eef5ec;
-        border: 1px solid #c4dcc0; padding: 6px; }
-.tip  { background-color: #eaf3fb; border: 1px solid #b7d3ee; padding: 6px; }
-.warn { background-color: #fdf1e6; border: 1px solid #f0c69c; padding: 6px; }
-.lvl  { color: #ffffff; background-color: #5b7f3a; font-size: 8pt; padding: 1px 4px; }
-.adv  { color: #ffffff; background-color: #8a3a3a; font-size: 8pt; padding: 1px 4px; }
-th    { background-color: #e3ebf3; text-align: left; }
-td, th { vertical-align: top; }
+:root{
+  --bg:#f6f8fb; --card:#ffffff; --ink:#1b2430; --muted:#5b6778; --line:#e2e8f0; --accent:#1f6feb; --accent2:#0b3d6e;
+  --tipbg:#eaf3fe; --tipbd:#9cc5f7; --warnbg:#fff4e5; --warnbd:#f3b66b; --eqbg:#f1f7ef; --eqbd:#b9d8b0;
+  --codebg:#0f1720; --codeink:#e6edf3; --beg:#2f7d32; --adv:#a23b3b;
+  --c1:#1f6feb; --c2:#d9480f; --c3:#2f9e44; --c4:#ae3ec9; --grid:#e5e9f0; --axis:#7b8794;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0d1117; --card:#161b22; --ink:#e6edf3; --muted:#9aa7b4; --line:#2a313c; --accent:#58a6ff; --accent2:#9ecbff;
+    --tipbg:#0f2742; --tipbd:#1f4f86; --warnbg:#3a2a12; --warnbd:#8a5a1c; --eqbg:#13281a; --eqbd:#2c5a37;
+    --codebg:#0b0f14; --grid:#26303b; --axis:#8b98a5; --shadow:none; }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+header.top{position:sticky;top:0;z-index:20;background:linear-gradient(120deg,#0b3d6e,#1f6feb);color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.hwrap{max-width:1280px;margin:0 auto;padding:14px 22px 0;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.brand{display:flex;gap:12px;align-items:center;flex:1;min-width:280px}
+.logo{width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.15);display:grid;place-items:center;font-weight:700}
+.brand h1{font-size:20px;margin:0;line-height:1.2} .brand p{margin:0;font-size:13px;opacity:.85}
+.search{position:relative;min-width:260px}
+.search input{width:100%;padding:9px 12px;border-radius:8px;border:0;font-size:14px;background:rgba(255,255,255,.95);color:#111}
+#results{position:absolute;right:0;top:42px;width:min(520px,92vw);max-height:60vh;overflow:auto;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);display:none}
+#results a{display:block;padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink)} #results a:hover{background:var(--tipbg);text-decoration:none}
+#results small{display:block;color:var(--muted)}
+nav.tabs{max-width:1280px;margin:10px auto 0;padding:0 22px;display:flex;gap:4px;overflow-x:auto}
+nav.tabs button{background:transparent;border:0;color:rgba(255,255,255,.8);padding:10px 14px;font-size:14px;border-radius:8px 8px 0 0;cursor:pointer;white-space:nowrap}
+nav.tabs button.on{background:var(--bg);color:var(--accent2);font-weight:600}
+.layout{max-width:1280px;margin:0 auto;padding:22px;display:grid;grid-template-columns:250px 1fr;gap:26px}
+aside{position:sticky;top:130px;align-self:start;max-height:calc(100vh - 150px);overflow:auto;font-size:13.5px}
+aside .ptitle{font-weight:700;color:var(--muted);text-transform:uppercase;font-size:11.5px;letter-spacing:.06em;margin:4px 0 8px}
+aside a{display:block;padding:5px 10px;border-left:3px solid transparent;color:var(--ink);border-radius:0 6px 6px 0}
+aside a.sub{padding-left:24px;font-size:12.5px;color:var(--muted)}
+aside a.act{border-left-color:var(--accent);background:var(--tipbg);color:var(--accent2);text-decoration:none}
+main{min-width:0}
+section.sec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 28px;margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:130px}
+section.sec h2{margin:0 0 12px;font-size:23px;color:var(--accent2);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.num{background:var(--accent);color:#fff;border-radius:8px;min-width:34px;height:34px;display:inline-grid;place-items:center;font-size:16px}
+h3{font-size:17px;margin:22px 0 8px;color:var(--accent2);scroll-margin-top:130px}
+.badge{font-size:11px;font-weight:700;letter-spacing:.05em;padding:3px 8px;border-radius:20px;color:#fff;vertical-align:middle}
+.beg{background:var(--beg)} .adv{background:var(--adv)}
+.lead{font-size:16px;color:var(--muted)}
+.tip,.warn,.eq{border-radius:10px;padding:12px 14px;margin:14px 0}
+.tip{background:var(--tipbg);border:1px solid var(--tipbd)} .warn{background:var(--warnbg);border:1px solid var(--warnbd)}
+.tip::before{content:"💡 ";} .warn::before{content:"⚠️ ";}
+.eq{background:var(--eqbg);border:1px solid var(--eqbd);font-family:Consolas,"Cascadia Mono","Courier New",monospace;font-size:14.5px;line-height:1.9;overflow-x:auto}
+code{font-family:Consolas,"Cascadia Mono",monospace;background:var(--tipbg);padding:1px 5px;border-radius:5px;font-size:13.5px}
+pre.code{background:var(--codebg);color:var(--codeink);border-radius:10px;padding:14px 16px;overflow-x:auto;font:13.5px/1.55 Consolas,"Cascadia Mono",monospace}
+pre.code code{background:none;padding:0;color:inherit}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--tipbg);color:var(--accent2);font-weight:600}
+tr:hover td{background:rgba(127,127,127,.05)}
+.tblwrap{overflow-x:auto}
+figure{margin:16px 0;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+figure svg{width:100%;height:auto;display:block;color:var(--ink)}
+figcaption{font-size:13px;color:var(--muted);margin-top:8px}
+svg text{fill:var(--ink);font:13px "Segoe UI",Arial,sans-serif} svg .lbl{fill:var(--accent2);font-weight:600} svg .mut{fill:var(--muted);font-size:12px}
+svg .w{fill:none;stroke:currentColor;stroke-width:2} svg .cur{stroke:var(--c2);stroke-width:4;fill:none} svg .pot{stroke:var(--c1);stroke-width:2;fill:none} svg .grd{stroke:var(--c3);stroke-width:2;stroke-dasharray:5 5;fill:none}
+svg .ax{stroke:var(--axis);stroke-width:1.5;fill:none} svg .crv{stroke:var(--c1);stroke-width:3;fill:none} svg .crv2{stroke:var(--c2);stroke-width:3;fill:none} svg .crv3{stroke:var(--c3);stroke-width:3;fill:none}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:14px 0;counter-reset:s}
+.step{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;position:relative}
+.step b{display:block;color:var(--accent2)} .step span{font-size:13px;color:var(--muted)}
+.step::before{counter-increment:s;content:counter(s);position:absolute;top:-10px;left:-8px;background:var(--accent);color:#fff;border-radius:50%;width:24px;height:24px;display:grid;place-items:center;font-size:13px;font-weight:700}
+.loop{font-size:13px;color:var(--muted);text-align:center;margin-top:-4px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:12px 0}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.card h4{margin:0 0 6px;color:var(--accent2)}
+.parts{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:14px 0}
+.parts a{display:block;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--ink)}
+.parts a:hover{border-color:var(--accent);text-decoration:none}
+.parts b{color:var(--accent2)} .parts small{display:block;color:var(--muted);margin-top:4px}
+/* widgets */
+.widget{border:1px solid var(--tipbd);background:linear-gradient(180deg,var(--tipbg),var(--card) 140px);border-radius:14px;padding:14px 16px;margin:18px 0}
+.widget .wt{font-weight:700;color:var(--accent2);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.widget .wt::before{content:"▶";font-size:11px;color:#fff;background:var(--accent);border-radius:50%;width:20px;height:20px;display:inline-grid;place-items:center}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;margin-bottom:10px}
+.ctl label{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.ctl input[type=text],.ctl select{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink);font:14px Consolas,monospace;width:120px}
+.ctl select{font-family:inherit;width:auto}
+.ctl input[type=range]{width:220px}
+.plots{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+canvas{width:100%;height:240px;background:var(--card);border:1px solid var(--line);border-radius:10px;display:block}
+.out{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px 14px;margin-top:10px;font-size:13.5px}
+.out div{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 9px}
+.out b{display:block;font-size:11.5px;color:var(--muted);font-weight:600}
+.out span{font-family:Consolas,monospace}
+.hint{font-size:12.5px;color:var(--muted)}
+footer{max-width:1280px;margin:0 auto;padding:10px 22px 40px;color:var(--muted);font-size:13px}
+.showall-note{display:none}
+@media (max-width:900px){.layout{grid-template-columns:1fr} aside{display:none} .steps{grid-template-columns:1fr 1fr} .plots{grid-template-columns:1fr}}
+@media print{header.top,aside,.search,nav.tabs,.ctl{display:none!important} .layout{display:block;padding:0} section.sec{display:block!important;box-shadow:none;break-inside:avoid-page} body{background:#fff}}
 </style>
 </head>
 <body>
+<!-- reusable circuit symbols (60 x 24, wire at y=12) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="res" viewBox="0 0 60 24" overflow="visible"><path d="M0 12H12L15 4L21 20L27 4L33 20L39 4L45 20L48 12H60" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+<symbol id="ind" viewBox="0 0 60 24" overflow="visible"><path d="M0 12H10a5 5 0 0 1 10 0a5 5 0 0 1 10 0a5 5 0 0 1 10 0a5 5 0 0 1 10 0H60" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+<symbol id="cap" viewBox="0 0 60 24" overflow="visible"><path d="M0 12H26M34 12H60M26 1V23M34 1V23" fill="none" stroke="currentColor" stroke-width="2.4"/></symbol>
+</defs></svg>
 
-<a name="top"></a>
-<h1>LCR Sweep: User manual</h1>
-<p>Frequency-sweep impedance measurements with the <b>Hioki 3532-50 LCR HiTESTER</b> over GPIB.<br>
+<a id="top"></a>
+<header class="top">
+  <div class="hwrap">
+    <div class="brand"><div class="logo">Z</div><div><h1>LCR Sweep: User manual</h1>
+      <p>Frequency-sweep impedance measurements with the Hioki 3532-50 LCR HiTESTER over GPIB</p></div></div>
+    <div class="search"><input id="q" type="search" placeholder="Search the manual…  (e.g. ESR, guard, averaging)" autocomplete="off"><div id="results"></div></div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button data-p="A">A · Getting started</button>
+    <button data-p="B">B · Understanding impedance</button>
+    <button data-p="C">C · Doing it right</button>
+    <button data-p="D">D · Reference</button>
+    <button data-p="all">All sections</button>
+  </nav>
+</header>
+
+<div class="layout">
+<aside id="toc"></aside>
+<main id="main">
+
+<!-- ======================================================= PART A -->
+<section class="sec" id="intro" data-part="A" data-title="Welcome">
+<h2>Welcome</h2>
+<p class="lead">Frequency-sweep impedance measurements with the <b>Hioki 3532-50 LCR HiTESTER</b> over GPIB.<br>
 This manual starts with the basics (no prior knowledge needed) and ends with the advanced topics.
-Sections marked <span class="lvl">BEGINNER</span> are enough for everyday measurements; sections marked
-<span class="adv">ADVANCED</span> explain the theory and the details.</p>
+Sections marked <span class="badge beg">BEGINNER</span> are enough for everyday measurements; sections marked
+<span class="badge adv">ADVANCED</span> explain the theory and the details.</p>
+<p>The blue boxes marked ▶ are <b>interactive</b>: change the numbers and the plots update immediately. Everything
+works offline.</p>
+<h3 id="contents">Contents</h3>
+<div class="parts">
+<a href="#quick" data-go="A"><b>Part A: Getting started</b><small>1. Quick start (5 minutes) · 2. Safety first · 3. The measuring workflow, step by step</small></a>
+<a href="#ac" data-go="B"><b>Part B: Understanding impedance</b><small>4. What does an LCR meter measure? · 5. Ideal R, L and C · 6. Real components and self-resonance · 7. Series and parallel equivalent circuits · 8. Every parameter explained</small></a>
+<a href="#conn" data-go="C"><b>Part C: Doing it right</b><small>9. Connections: the 4-terminal method · 10. Fixture calibration (open / short) · 11. Test signal and measurement settings · 12. Frequency sweep settings · 13. Recipes for common measurements · 14. Reading the plots</small></a>
+<a href="#files" data-go="D"><b>Part D: Reference</b><small>15. Data files · 16. Accuracy and good practice · 17. Troubleshooting · 18. Advanced topics · 19. Glossary</small></a>
+</div>
+</section>
 
-<h3>Contents</h3>
-<table border="0" cellpadding="2">
-<tr><td valign="top">
-<b>Part A: Getting started</b><br>
-1. <a href="#quick">Quick start (5 minutes)</a><br>
-2. <a href="#safety">Safety first</a><br>
-3. <a href="#workflow">The measuring workflow, step by step</a><br>
-<br>
-<b>Part B: Understanding impedance</b><br>
-4. <a href="#ac">What does an LCR meter measure?</a><br>
-5. <a href="#ideal">Ideal R, L and C</a><br>
-6. <a href="#real">Real components and self-resonance</a><br>
-7. <a href="#models">Series and parallel equivalent circuits</a><br>
-8. <a href="#params">Every parameter explained</a><br>
-</td><td width="30"></td><td valign="top">
-<b>Part C: Doing it right</b><br>
-9. <a href="#conn">Connections: the 4-terminal method</a><br>
-10. <a href="#cal">Fixture calibration (open / short)</a><br>
-11. <a href="#signal">Test signal and measurement settings</a><br>
-12. <a href="#sweep">Frequency sweep settings</a><br>
-13. <a href="#recipes">Recipes for common measurements</a><br>
-14. <a href="#plots">Reading the plots</a><br>
-<br>
-<b>Part D: Reference</b><br>
-15. <a href="#files">Data files</a><br>
-16. <a href="#accuracy">Accuracy and good practice</a><br>
-17. <a href="#trouble">Troubleshooting</a><br>
-18. <a href="#advanced">Advanced topics</a><br>
-19. <a href="#glossary">Glossary</a><br>
-</td></tr></table>
-
-<!-- ================================================================== -->
-<a name="quick"></a>
-<h2>1. Quick start (5 minutes) <span class="lvl">BEGINNER</span></h2>
+<section class="sec" id="quick" data-part="A" data-title="1. Quick start (5 minutes)">
+<h2><span class="num">1</span> Quick start (5 minutes) <span class="badge beg">BEGINNER</span></h2>
 <ol>
 <li><b>Connect</b> (section 1 of the window): Interface <i>VISA</i>, resource <code>GPIB0::1::INSTR</code>,
     click <b>Connect</b>. The Instrument field shows <code>HIOKI,3532,50,…</code>.</li>
@@ -77,10 +161,10 @@ Sections marked <span class="lvl">BEGINNER</span> are enough for everyday measur
 </ol>
 <p class="tip"><b>Tip:</b> for a capacitor, choose <b>Cs</b> (or Cp) and <b>D</b> in the two plots; for an inductor
 <b>Ls</b> and <b>Q</b>; for a resistor <b>Rs</b> and <b>θ</b>. Section <a href="#params">8</a> explains why.</p>
+</section>
 
-<!-- ================================================================== -->
-<a name="safety"></a>
-<h2>2. Safety first <span class="lvl">BEGINNER</span></h2>
+<section class="sec" id="safety" data-part="A" data-title="2. Safety first">
+<h2><span class="num">2</span> Safety first <span class="badge beg">BEGINNER</span></h2>
 <p class="warn"><b>The measurement terminals tolerate at most ±40 V DC</b> (printed on the front panel: "UNKNOWN ±40 V DC MAX").</p>
 <ul>
 <li><b>Discharge capacitors</b> before connecting them (short the leads through a resistor of about 100 Ω–1 kΩ
@@ -92,21 +176,18 @@ Sections marked <span class="lvl">BEGINNER</span> are enough for everyday measur
 <li>Some samples (piezo elements, large inductors) can generate voltages when they are squeezed, heated or
     when current is interrupted. Handle them gently and let them settle.</li>
 </ul>
+</section>
 
-<!-- ================================================================== -->
-<a name="workflow"></a>
-<h2>3. The measuring workflow, step by step <span class="lvl">BEGINNER</span></h2>
-<pre>
- ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
- │ 1. Connect   │──►│ 2. Choose    │──►│ 3. Calibrate │──►│ 4. Insert    │──►│ 5. Start     │
- │    meter     │   │  frequencies │   │  OPEN, then  │   │  the sample, │   │  sweep; data │
- │   (GPIB)     │   │  + test level│   │  SHORT (no   │   │  name, test  │   │  saves itself│
- │              │   │              │   │  sample!)    │   │  number      │   │              │
- └──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘   └──────┬───────┘
-                                              ▲                                     │
-                                              │  only if you change frequencies,    │ next sample:
-                                              └──── level, cables or fixture ◄──────┘ back to step 4
-</pre>
+<section class="sec" id="workflow" data-part="A" data-title="3. The measuring workflow, step by step">
+<h2><span class="num">3</span> The measuring workflow, step by step <span class="badge beg">BEGINNER</span></h2>
+<div class="steps">
+ <div class="step"><b>Connect meter</b><span>GPIB</span></div>
+ <div class="step"><b>Choose frequencies</b><span>+ test level</span></div>
+ <div class="step"><b>Calibrate</b><span>OPEN, then SHORT (no sample!)</span></div>
+ <div class="step"><b>Insert the sample</b><span>name, test number</span></div>
+ <div class="step"><b>Start sweep</b><span>data saves itself</span></div>
+</div>
+<p class="loop">↻ Next sample: back to step 4. Back to step 3 only if you change frequencies, level, cables or fixture.</p>
 <h3>Why this order?</h3>
 <ul>
 <li>The <b>calibration must use exactly the same frequencies and the same test level</b> as the measurement,
@@ -118,142 +199,187 @@ Sections marked <span class="lvl">BEGINNER</span> are enough for everyday measur
 <li>The <b>test number</b> counts up by one after every completed sweep, so each measurement gets its own
     file: <code>20261123_181057_C100nF_JDoe_T3.csv</code> (date, time, sample, operator, test number).</li>
 </ul>
+</section>
 
-<!-- ================================================================== -->
-<a name="ac"></a>
-<h2>4. What does an LCR meter measure? <span class="lvl">BEGINNER</span></h2>
+<!-- ======================================================= PART B -->
+<section class="sec" id="ac" data-part="B" data-title="4. What does an LCR meter measure?">
+<h2><span class="num">4</span> What does an LCR meter measure? <span class="badge beg">BEGINNER</span></h2>
 <p>An LCR meter applies a small <b>AC (alternating) voltage</b> of a chosen frequency to the sample, measures the
 <b>AC current</b> that flows, and compares the two. Two things are measured:</p>
 <ul>
 <li><b>How big the current is</b> for a given voltage. This gives the <b>impedance magnitude |Z|</b> in ohms (Ω),
     the AC version of resistance:</li>
 </ul>
-<p class="eq">|Z| = V<sub>rms</sub> / I<sub>rms</sub>          (unit: Ω)</p>
+<div class="eq">|Z| = V<sub>rms</sub> / I<sub>rms</sub> &nbsp;&nbsp;&nbsp; (unit: Ω)</div>
 <ul>
 <li><b>How much the current is shifted in time</b> relative to the voltage. This gives the
     <b>phase angle θ</b> in degrees.</li>
 </ul>
-<pre>
-  voltage  ──╮    ╭──╮    ╭──          θ = 0°    : current in step with voltage      → resistor
-             ╰────╯  ╰────╯            θ = +90°  : current lags  ¼ period behind      → inductor
-  current  ────╮    ╭──╮    ╭          θ = −90°  : current leads ¼ period ahead       → capacitor
-               ╰────╯  ╰────╯          anything in between: a mixture (real components)
-            ◄─►  time shift = θ
-</pre>
+<div class="tblwrap"><table>
+<tr><th>θ</th><th>Current vs. voltage</th><th>Behaves like</th></tr>
+<tr><td>θ = 0°</td><td>current in step with voltage</td><td>resistor</td></tr>
+<tr><td>θ = +90°</td><td>current lags ¼ period behind</td><td>inductor</td></tr>
+<tr><td>θ = −90°</td><td>current leads ¼ period ahead</td><td>capacitor</td></tr>
+<tr><td>anything in between</td><td>a mixture</td><td>real components</td></tr>
+</table></div>
+
+<div class="widget" id="w-phasor">
+ <div class="wt">Try it: phase shift and the impedance arrow</div>
+ <div class="ctl">
+  <label>Phase θ: <b id="ph-val">−60°</b><input type="range" id="ph-th" min="-90" max="90" value="-60"></label>
+  <label>|Z| (Ω)<input type="text" id="ph-z" value="1k"></label>
+ </div>
+ <div class="plots"><canvas id="ph-wave"></canvas><canvas id="ph-arrow"></canvas></div>
+ <div class="out" id="ph-out"></div>
+ <p class="hint">Left: voltage (blue) and current (orange) over two periods; the time shift is θ. Right: the same
+ impedance as an arrow, split into resistance R (horizontal) and reactance X (vertical).</p>
+</div>
+
 <p>The 3532-50 reports exactly these two numbers, <b>|Z| and θ</b>. Every other quantity in this program (Cs, Ls,
 Rp, D, Q, …) is <b>calculated</b> from |Z|, θ and the frequency f, with the same formulas the meter uses internally.</p>
 
-<h3>Impedance as an arrow (complex number)</h3>
+<h3 id="arrow">Impedance as an arrow (complex number)</h3>
 <p>It is convenient to draw |Z| and θ as an arrow. Its horizontal part is the <b>resistance R</b> (energy is lost as heat);
 its vertical part is the <b>reactance X</b> (energy is stored and returned every cycle).</p>
-<pre>
-      X (reactance, Ω)
-      ▲
-      │            ● Z = R + jX          inductive  : X &gt; 0, θ &gt; 0  (arrow points up)
-      │          ╱                       capacitive : X &lt; 0, θ &lt; 0  (arrow points down)
-      │   |Z|  ╱
-      │      ╱                           R = |Z|·cos θ
-      │    ╱  θ                          X = |Z|·sin θ
-      │  ╱ ⌒                             |Z| = √(R² + X²)
-      └──────────────────────►  R (resistance, Ω)
-</pre>
+<div class="eq">Z = R + jX<br>
+R = |Z|·cos θ &nbsp;&nbsp; X = |Z|·sin θ &nbsp;&nbsp; |Z| = √(R² + X²)<br>
+inductive : X &gt; 0, θ &gt; 0 (arrow points up) &nbsp;&nbsp; capacitive : X &lt; 0, θ &lt; 0 (arrow points down)</div>
 <p>Engineers write this as <code>Z = R + jX</code>, where <code>j</code> marks the "vertical" part
 (mathematically j = √−1). You do not need complex numbers to use the program; they only make the formulas short.</p>
 <p>The frequency appears in almost every formula as the <b>angular frequency</b>:</p>
-<p class="eq">ω = 2π·f          (unit: rad/s;  f = 1 kHz  →  ω = 6283 rad/s)</p>
+<div class="eq">ω = 2π·f &nbsp;&nbsp;&nbsp; (unit: rad/s;  f = 1 kHz → ω = 6283 rad/s)</div>
+</section>
 
-<!-- ================================================================== -->
-<a name="ideal"></a>
-<h2>5. Ideal R, L and C <span class="lvl">BEGINNER</span></h2>
-<table border="1" cellpadding="5" cellspacing="0">
+<section class="sec" id="ideal" data-part="B" data-title="5. Ideal R, L and C">
+<h2><span class="num">5</span> Ideal R, L and C <span class="badge beg">BEGINNER</span></h2>
+<div class="tblwrap"><table>
 <tr><th>Component</th><th>Symbol</th><th>Impedance</th><th>|Z|</th><th>θ</th><th>Behaviour with frequency</th></tr>
-<tr><td>Resistor R</td><td><code>──/\/\/──</code></td><td>Z = R</td><td>R</td><td>0°</td><td>constant</td></tr>
-<tr><td>Inductor L</td><td><code>───‿‿‿───</code></td><td>Z = jωL</td><td>ωL = 2πfL</td><td>+90°</td><td>rises with f (×10 per decade)</td></tr>
-<tr><td>Capacitor C</td><td><code>──┤├──</code></td><td>Z = 1/(jωC) = −j/(ωC)</td><td>1/(2πfC)</td><td>−90°</td><td>falls with f (÷10 per decade)</td></tr>
-</table>
+<tr><td>Resistor R</td><td><svg width="64" height="24"><use href="#res" width="60" height="24" x="2"/></svg></td><td>Z = R</td><td>R</td><td>0°</td><td>constant</td></tr>
+<tr><td>Inductor L</td><td><svg width="64" height="24"><use href="#ind" width="60" height="24" x="2"/></svg></td><td>Z = jωL</td><td>ωL = 2πfL</td><td>+90°</td><td>rises with f (×10 per decade)</td></tr>
+<tr><td>Capacitor C</td><td><svg width="64" height="24"><use href="#cap" width="60" height="24" x="2"/></svg></td><td>Z = 1/(jωC) = −j/(ωC)</td><td>1/(2πfC)</td><td>−90°</td><td>falls with f (÷10 per decade)</td></tr>
+</table></div>
 <h3>Worked examples</h3>
-<p class="eq">100 nF at 1 kHz:   |Z| = 1 / (2π · 1000 · 100·10⁻⁹) = 1592 Ω,  θ = −90°<br>
-100 nF at 100 kHz: |Z| = 15.9 Ω   (100× higher frequency → 100× lower impedance)<br>
-100 µH at 100 kHz: |Z| = 2π · 100000 · 100·10⁻⁶ = 62.8 Ω,  θ = +90°</p>
-<pre>
-  log |Z|
-     ▲  ╲ capacitor                          inductor ╱
-     │    ╲  (slope −1)                     (slope +1)╱
-     │      ╲                                       ╱
-     │────────╲─────────── resistor ──────────────╱───────
-     │          ╲                               ╱
-     │            ╲                           ╱
-     └──────────────────────────────────────────────────►  log f
-</pre>
+<div class="eq">100 nF at 1 kHz: &nbsp; |Z| = 1 / (2π · 1000 · 100·10⁻⁹) = 1592 Ω, θ = −90°<br>
+100 nF at 100 kHz: |Z| = 15.9 Ω &nbsp; (100× higher frequency → 100× lower impedance)<br>
+100 µH at 100 kHz: |Z| = 2π · 100000 · 100·10⁻⁶ = 62.8 Ω, θ = +90°</div>
+<figure>
+<svg viewBox="0 0 560 220" role="img" aria-label="log |Z| versus log f for resistor, capacitor and inductor">
+ <path class="ax" d="M50 15V190H540"/><text x="10" y="20">log |Z|</text><text x="500" y="210">log f</text>
+ <path class="crv" d="M60 30L330 185"/><text x="70" y="62" class="lbl">capacitor (slope −1)</text>
+ <path class="crv2" d="M260 185L530 30"/><text x="400" y="62" class="lbl">inductor (slope +1)</text>
+ <path class="crv3" d="M55 112H535"/><text x="230" y="104" class="lbl">resistor</text>
+</svg>
+<figcaption>On log–log axes an ideal capacitor falls with slope −1, an inductor rises with slope +1, and a resistor is flat.</figcaption>
+</figure>
+</section>
 
-<!-- ================================================================== -->
-<a name="real"></a>
-<h2>6. Real components and self-resonance <span class="lvl">BEGINNER</span></h2>
+<section class="sec" id="real" data-part="B" data-title="6. Real components and self-resonance">
+<h2><span class="num">6</span> Real components and self-resonance <span class="badge beg">BEGINNER</span></h2>
 <p>Real parts are never ideal: every capacitor also has some resistance and inductance, every inductor some
 resistance and capacitance. These "parasitic" parts are what you usually want to measure.</p>
-
-<h3>Real capacitor</h3>
-<pre>
-                ESR          ESL            C
-     o───────/\/\/\/─────‿‿‿‿─────┬─────┤├─────┬───────o
-                                   │            │
-                                   └──/\/\/\/───┘
-                                       R_leak
-  ESR    = equivalent series resistance (electrodes, leads, dielectric loss)
-  ESL    = equivalent series inductance (leads, internal geometry; roughly 1 nH per mm of lead)
-  R_leak = leakage / insulation resistance (MΩ … GΩ at DC)
-</pre>
-<h3>Real inductor</h3>
-<pre>
-                DCR            L
-     o──┬────/\/\/\/─────‿‿‿‿‿─────┬──o        DCR   = winding (copper) resistance
-        │                           │           C_par = capacitance between the turns
-        └───────────┤├──────────────┘           + core losses for iron / ferrite cores
-                   C_par
-</pre>
-<h3>Self-resonance (SRF)</h3>
+<h3 id="realcap">Real capacitor</h3>
+<figure>
+<svg viewBox="0 0 520 135" role="img" aria-label="Real capacitor equivalent circuit">
+ <path class="w" d="M20 40H60M120 40H140M200 40H300M360 40H480M250 40V95H300M360 95H410V40"/>
+ <use href="#res" x="60" y="28" width="60" height="24"/><use href="#ind" x="140" y="28" width="60" height="24"/>
+ <use href="#cap" x="300" y="28" width="60" height="24"/><use href="#res" x="300" y="83" width="60" height="24"/>
+ <circle cx="20" cy="40" r="4" fill="var(--card)" stroke="currentColor" stroke-width="2"/><circle cx="480" cy="40" r="4" fill="var(--card)" stroke="currentColor" stroke-width="2"/>
+ <circle cx="250" cy="40" r="3.5" fill="currentColor"/><circle cx="410" cy="40" r="3.5" fill="currentColor"/>
+ <text x="90" y="20" text-anchor="middle" class="lbl">ESR</text><text x="170" y="20" text-anchor="middle" class="lbl">ESL</text>
+ <text x="330" y="20" text-anchor="middle" class="lbl">C</text><text x="330" y="125" text-anchor="middle" class="lbl">R_leak</text>
+</svg>
+<figcaption><b>ESR</b> = equivalent series resistance (electrodes, leads, dielectric loss) ·
+<b>ESL</b> = equivalent series inductance (leads, internal geometry; roughly 1 nH per mm of lead) ·
+<b>R_leak</b> = leakage / insulation resistance (MΩ … GΩ at DC)</figcaption>
+</figure>
+<h3 id="realind">Real inductor</h3>
+<figure>
+<svg viewBox="0 0 520 125" role="img" aria-label="Real inductor equivalent circuit">
+ <path class="w" d="M20 40H150M210 40H250M310 40H480M100 40V92H210M270 92H380V40"/>
+ <use href="#res" x="150" y="28" width="60" height="24"/><use href="#ind" x="250" y="28" width="60" height="24"/>
+ <use href="#cap" x="210" y="80" width="60" height="24"/>
+ <circle cx="20" cy="40" r="4" fill="var(--card)" stroke="currentColor" stroke-width="2"/><circle cx="480" cy="40" r="4" fill="var(--card)" stroke="currentColor" stroke-width="2"/>
+ <circle cx="100" cy="40" r="3.5" fill="currentColor"/><circle cx="380" cy="40" r="3.5" fill="currentColor"/>
+ <text x="180" y="20" text-anchor="middle" class="lbl">DCR</text><text x="280" y="20" text-anchor="middle" class="lbl">L</text>
+ <text x="240" y="120" text-anchor="middle" class="lbl">C_par</text>
+</svg>
+<figcaption><b>DCR</b> = winding (copper) resistance · <b>C_par</b> = capacitance between the turns ·
++ core losses for iron / ferrite cores</figcaption>
+</figure>
+<h3 id="srf">Self-resonance (SRF)</h3>
 <p>Because every part contains both an L and a C, there is always a frequency where their reactances cancel.
 This is the <b>self-resonant frequency</b>:</p>
-<p class="eq">f₀ = 1 / ( 2π · √(L · C) )</p>
+<div class="eq">f₀ = 1 / ( 2π · √(L · C) )</div>
 <ul>
 <li><b>Capacitor:</b> below f₀ it behaves like a capacitor (θ ≈ −90°); <b>at f₀ the phase crosses 0°</b> and |Z| has
     its minimum, equal to the ESR; <b>above f₀ it behaves like an inductor</b> (θ &gt; 0).
     Example: 100 nF with 30 nH of lead inductance → f₀ = 1/(2π√(30·10⁻⁹ · 100·10⁻⁹)) ≈ <b>2.9 MHz</b>.</li>
 <li><b>Inductor:</b> below f₀ inductive; at f₀ |Z| has a <i>maximum</i>; above f₀ it behaves like a capacitor.</li>
 </ul>
-<pre>
-  log |Z|            capacitor                               inductor
-     ▲  ╲                         ╱            ▲                  ╱╲
-     │    ╲                     ╱              │                ╱    ╲
-     │      ╲    capacitive   ╱ inductive      │   inductive  ╱        ╲  capacitive
-     │        ╲             ╱                  │            ╱            ╲
-     │          ╲_________╱  ← |Z| = ESR       │          ╱                ╲
-     └──────────────────●──────────► log f     └──────────────●───────────────► log f
-                        f₀                                    f₀
-     θ:  −90° ……………… 0° ……………… +90°             θ: +90° ……………… 0° ……………… −90°
-</pre>
+<figure>
+<svg viewBox="0 0 560 235" role="img" aria-label="Self-resonance of a capacitor and an inductor">
+ <path class="ax" d="M40 20V185H265"/><path class="ax" d="M300 20V185H525"/>
+ <text x="45" y="16" class="mut">log |Z|</text><text x="305" y="16" class="mut">log |Z|</text>
+ <text x="215" y="203" class="mut">log f</text><text x="475" y="203" class="mut">log f</text>
+ <path class="crv" d="M50 30L140 158Q155 180 170 158L258 32"/><circle cx="155" cy="169" r="4" fill="var(--c2)"/>
+ <text x="155" y="203" text-anchor="middle" class="lbl">f₀</text><text x="185" y="175" class="mut">← |Z| = ESR</text>
+ <text x="60" y="110" class="mut">capacitive</text><text x="195" y="110" class="mut">inductive</text>
+ <text x="150" y="226" text-anchor="middle" class="mut">capacitor · θ: −90° … 0° … +90°</text>
+ <path class="crv2" d="M310 180L395 58Q410 36 425 58L515 180"/><circle cx="410" cy="47" r="4" fill="var(--c1)"/>
+ <text x="410" y="203" text-anchor="middle" class="lbl">f₀</text>
+ <text x="318" y="110" class="mut">inductive</text><text x="455" y="110" class="mut">capacitive</text>
+ <text x="410" y="226" text-anchor="middle" class="mut">inductor · θ: +90° … 0° … −90°</text>
+</svg>
+</figure>
 <p class="tip"><b>Practical meaning:</b> a value such as "Cs = −39 nF at 5 MHz" or "Ls negative" is <b>not an error</b>. It only
 means that you are above (or below) the self-resonance, where that equivalent circuit no longer describes the part.
 Look at θ: as long as θ is close to −90° the capacitance values are meaningful.</p>
 
-<!-- ================================================================== -->
-<a name="models"></a>
-<h2>7. Series and parallel equivalent circuits <span class="lvl">BEGINNER</span></h2>
+<div class="widget" id="w-imp">
+ <div class="wt">Try it: impedance explorer (42 Hz – 5 MHz, the meter's range)</div>
+ <div class="ctl">
+  <label>Component<select id="ie-type">
+   <option value="rc">Real capacitor (C + ESR + ESL)</option><option value="rl">Real inductor (L + DCR + C_par)</option>
+   <option value="r">Ideal resistor</option><option value="c">Ideal capacitor</option><option value="l">Ideal inductor</option></select></label>
+  <label data-for="rc c">C (F)<input type="text" id="ie-c" value="100n"></label>
+  <label data-for="rc">ESR (Ω)<input type="text" id="ie-esr" value="0.05"></label>
+  <label data-for="rc">ESL (H)<input type="text" id="ie-esl" value="30n"></label>
+  <label data-for="rl l">L (H)<input type="text" id="ie-l" value="100u"></label>
+  <label data-for="rl">DCR (Ω)<input type="text" id="ie-dcr" value="0.5"></label>
+  <label data-for="rl">C_par (F)<input type="text" id="ie-cp" value="20p"></label>
+  <label data-for="r">R (Ω)<input type="text" id="ie-r" value="1k"></label>
+  <label>Readout frequency: <b id="ie-fv">1 kHz</b><input type="range" id="ie-f" min="0" max="1000" value="352"></label>
+ </div>
+ <div class="plots"><canvas id="ie-z"></canvas><canvas id="ie-th"></canvas></div>
+ <div class="out" id="ie-out"></div>
+ <p class="hint">Values accept SI prefixes: p, n, u (µ), m, k, M, G. The orange line marks the readout frequency.</p>
+</div>
+</section>
+
+<section class="sec" id="models" data-part="B" data-title="7. Series and parallel equivalent circuits">
+<h2><span class="num">7</span> Series and parallel equivalent circuits <span class="badge beg">BEGINNER</span></h2>
 <p>From |Z| and θ the meter cannot know what is <i>inside</i> the part. It describes the part with the simplest
 circuit that gives the same |Z| and θ at that one frequency. There are two choices:</p>
-<pre>
-   SERIES model  ("s")                          PARALLEL model  ("p")
-
-   o──/\/\/\/──┤├── or ───‿‿‿───o              o──┬──/\/\/\/──┬──o
-        Rs        Cs        Ls                     │    Rp      │
-                                                   └──┤├ or ‿‿‿─┘
-   Z = Rs + jX                                          Cp    Lp
-                                                Y = 1/Z = G + jB
-</pre>
+<figure>
+<svg viewBox="0 0 560 150" role="img" aria-label="Series and parallel equivalent circuits">
+ <text x="120" y="16" text-anchor="middle" class="lbl">SERIES model ("s")</text>
+ <path class="w" d="M20 60H50M110 60H130M190 60H220"/>
+ <use href="#res" x="50" y="48" width="60" height="24"/><use href="#cap" x="130" y="48" width="60" height="24"/>
+ <circle cx="20" cy="60" r="4" fill="var(--card)" stroke="currentColor" stroke-width="2"/><circle cx="220" cy="60" r="4" fill="var(--card)" stroke="currentColor" stroke-width="2"/>
+ <text x="80" y="40" text-anchor="middle">Rs</text><text x="160" y="40" text-anchor="middle">Cs or Ls</text>
+ <text x="120" y="110" text-anchor="middle" class="mut">Z = Rs + jX</text>
+ <text x="420" y="16" text-anchor="middle" class="lbl">PARALLEL model ("p")</text>
+ <path class="w" d="M300 60H340M340 35V85M340 35H380M440 35H480M340 85H380M440 85H480M480 35V85M480 60H520"/>
+ <use href="#res" x="380" y="23" width="60" height="24"/><use href="#cap" x="380" y="73" width="60" height="24"/>
+ <circle cx="300" cy="60" r="4" fill="var(--card)" stroke="currentColor" stroke-width="2"/><circle cx="520" cy="60" r="4" fill="var(--card)" stroke="currentColor" stroke-width="2"/>
+ <text x="410" y="16" dy="2" text-anchor="middle"></text><text x="465" y="30">Rp</text><text x="410" y="118" text-anchor="middle">Cp or Lp</text>
+ <text x="410" y="140" text-anchor="middle" class="mut">Y = 1/Z = G + jB</text>
+</svg>
+</figure>
 <p>Both describe the <b>same</b> measurement; they are just two ways of writing it. They give (almost) the same
 C or L when the losses are small (D &lt; 0.1), and very different values when the losses are large.</p>
 <h3>Which one should I use?</h3>
-<table border="1" cellpadding="5" cellspacing="0">
+<div class="tblwrap"><table>
 <tr><th>Situation</th><th>Use</th><th>Reason</th></tr>
 <tr><td>Low impedance (|Z| below about 100 Ω): large capacitors, small inductors, high frequencies</td>
     <td><b>Series</b> (Cs, Ls, Rs)</td><td>the series resistance (ESR, leads) dominates the losses</td></tr>
@@ -261,20 +387,20 @@ C or L when the losses are small (D &lt; 0.1), and very different values when th
     <td><b>Parallel</b> (Cp, Lp, Rp)</td><td>the parallel leakage / dielectric loss dominates</td></tr>
 <tr><td>In between</td><td>whatever the datasheet / standard uses</td><td>both are correct; compare like with like</td></tr>
 <tr><td>Dielectric and material samples</td><td><b>Parallel</b> (Cp, D)</td><td>permittivity is defined from Cp</td></tr>
-</table>
+</table></div>
 <h3>Converting between them</h3>
-<p class="eq">Cs = Cp · (1 + D²)        Cp = Cs / (1 + D²)<br>
-Ls = Lp · Q² / (1 + Q²)    Lp = Ls · (1 + 1/Q²)<br>
-Rp = Rs · (1 + Q²)         (Q = 1/D)</p>
+<div class="eq">Cs = Cp · (1 + D²) &nbsp;&nbsp;&nbsp;&nbsp; Cp = Cs / (1 + D²)<br>
+Ls = Lp · Q² / (1 + Q²) &nbsp; Lp = Ls · (1 + 1/Q²)<br>
+Rp = Rs · (1 + Q²) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Q = 1/D)</div>
 <p>Example from a real measurement: a 100 nF ceramic capacitor at 1 MHz had D = 1.2, which gave
 Cs = 102 nF but Cp = 42 nF. Both are "right"; at D = 1.2 the part is no longer a good capacitor
 at that frequency, so a single C value is not very meaningful.</p>
+</section>
 
-<!-- ================================================================== -->
-<a name="params"></a>
-<h2>8. Every parameter explained <span class="lvl">BEGINNER</span></h2>
+<section class="sec" id="params" data-part="B" data-title="8. Every parameter explained">
+<h2><span class="num">8</span> Every parameter explained <span class="badge beg">BEGINNER</span></h2>
 <p>All values are calculated from |Z|, θ and f (ω = 2πf). Formulas, in the order of the plot selector:</p>
-<table border="1" cellpadding="4" cellspacing="0">
+<div class="tblwrap"><table>
 <tr><th>Parameter</th><th>Unit</th><th>Formula</th><th>Meaning</th><th>Use it for</th></tr>
 <tr><td><b>|Z|</b></td><td>Ω</td><td>measured</td><td>impedance magnitude: "AC resistance"</td><td>everything; finding resonances (min or max)</td></tr>
 <tr><td><b>θ</b></td><td>°</td><td>measured</td><td>phase: −90° capacitive, 0° resistive, +90° inductive</td><td>checking what the part behaves like; SRF where θ = 0°</td></tr>
@@ -292,54 +418,70 @@ at that frequency, so a single C value is not very meaningful.</p>
 <tr><td><b>Q</b></td><td>–</td><td>|X / Rs| = 1 / D</td><td>quality factor</td><td>inductors and resonators (large = good)</td></tr>
 <tr><td>Z_std, θ_std</td><td>Ω, °</td><td>statistics</td><td>standard deviation when "Readings / point" &gt; 1</td><td>error bars, repeatability</td></tr>
 <tr><td>Z_raw, θ_raw</td><td>Ω, °</td><td>measured</td><td>reading before the open/short correction</td><td>checking the calibration</td></tr>
-</table>
+</table></div>
+
+<div class="widget" id="w-calc">
+ <div class="wt">Try it: parameter calculator (same formulas as the program)</div>
+ <div class="ctl">
+  <label>|Z| (Ω)<input type="text" id="pc-z" value="1310"></label>
+  <label>θ (°)<input type="text" id="pc-th" value="-88.73"></label>
+  <label>f (Hz)<input type="text" id="pc-f" value="1107.8"></label>
+ </div>
+ <div class="out" id="pc-out"></div>
+ <p class="hint">Example values: the 100 nF ceramic capacitor measured at 1.1 kHz.</p>
+</div>
 
 <h3>Why does Rp fall with frequency for a capacitor?</h3>
 <p>Because Rp is not a fixed resistor but a way of expressing the loss: </p>
-<p class="eq">Rp = 1 / (ω · C · D)</p>
+<div class="eq">Rp = 1 / (ω · C · D)</div>
 <p>Even with constant C and D, Rp falls by 10× for every 10× in frequency. This is normal. The DC leakage
 resistance (GΩ) can only be measured with an insulation tester at DC.</p>
-
 <h3>Typical good values</h3>
-<table border="1" cellpadding="4" cellspacing="0">
+<div class="tblwrap"><table>
 <tr><th>Part</th><th>D at 1 kHz</th><th>Remarks</th></tr>
 <tr><td>Film capacitor (polypropylene)</td><td>≈ 0.0002 – 0.001</td><td>very low loss</td></tr>
 <tr><td>C0G / NP0 ceramic (class 1)</td><td>≤ 0.001</td><td>stable with voltage and temperature</td></tr>
 <tr><td>X7R / X5R ceramic (class 2)</td><td>≤ 0.025 (typ.)</td><td>C depends on voltage, temperature and age</td></tr>
 <tr><td>Y5V / Z5U ceramic (class 2)</td><td>≤ 0.05 – 0.07 (typ.)</td><td>strong voltage and temperature dependence</td></tr>
 <tr><td>Aluminium electrolytic</td><td>0.05 – 0.3 (usually specified at 120 Hz)</td><td>large ESR; check polarity and DC rating</td></tr>
-</table>
+</table></div>
 <p>Always check the datasheet of your part: tolerances and limits differ between manufacturers.</p>
+</section>
 
-<!-- ================================================================== -->
-<a name="conn"></a>
-<h2>9. Connections: the 4-terminal method <span class="lvl">BEGINNER</span></h2>
+<!-- ======================================================= PART C -->
+<section class="sec" id="conn" data-part="C" data-title="9. Connections: the 4-terminal method">
+<h2><span class="num">9</span> Connections: the 4-terminal method <span class="badge beg">BEGINNER</span></h2>
 <h3>The problem with two wires</h3>
 <p>If you connect a part with just two wires, the meter measures the part <b>plus both wires</b>:</p>
-<pre>
-   meter o───── lead 0.1 Ω ─────┐
-                                [ 1 Ω sample ]     the meter sees 1.2 Ω instead of 1 Ω  →  20 % error
-   meter o───── lead 0.1 Ω ─────┘
-</pre>
+<figure>
+<svg viewBox="0 0 600 125" role="img" aria-label="Two-wire measurement error">
+ <rect x="20" y="15" width="70" height="90" rx="8" class="w"/><text x="55" y="65" text-anchor="middle">meter</text>
+ <path class="w" d="M90 30H160M220 30H330V30M90 90H160M220 90H330"/>
+ <use href="#res" x="160" y="18" width="60" height="24"/><use href="#res" x="160" y="78" width="60" height="24"/>
+ <g transform="translate(330,30) rotate(90)"><use href="#res" y="-12" width="60" height="24"/></g>
+ <text x="190" y="12" text-anchor="middle" class="mut">lead 0.1 Ω</text><text x="190" y="120" text-anchor="middle" class="mut">lead 0.1 Ω</text>
+ <text x="345" y="64" class="lbl">1 Ω sample</text>
+ <text x="440" y="56">the meter sees 1.2 Ω</text><text x="440" y="76">instead of 1 Ω → 20 % error</text>
+</svg>
+</figure>
 <h3>The solution: separate wires for current and voltage (Kelvin connection)</h3>
-<pre>
-   METER                              cables                       FIXTURE
-
-   H CUR ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓  current goes in
-                                                          ┣━━━━━━┓
-   H POT ●────────────────────────────────────────────────┛      ┃
-                                                               ┌─┴─┐
-                                                               │DUT│   DUT = device under test
-                                                               └─┬─┘         (your sample)
-   L POT ●────────────────────────────────────────────────┓      ┃
-                                                          ┣━━━━━━┛
-   L CUR ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛  current comes back
-
-   GUARD ●· · · · · · · · · · · · · · · · · · · · · · · · · · · ·  shield / guard of the fixture (⏚)
-
-   ━━━  current path (H CUR → sample → L CUR, where the current is measured)
-   ───  voltage sensing (H POT and L POT measure the voltage right at the sample)
-</pre>
+<figure>
+<svg viewBox="0 0 640 265" role="img" aria-label="Four-terminal Kelvin connection">
+ <text x="40" y="14" class="mut">METER</text><text x="250" y="14" class="mut">cables</text><text x="400" y="14" class="mut">FIXTURE</text>
+ <text x="20" y="45">H CUR</text><text x="20" y="85">H POT</text><text x="20" y="155">L POT</text><text x="20" y="195">L CUR</text><text x="20" y="240">GUARD</text>
+ <path class="cur" d="M110 40H420V100"/><path class="pot" d="M110 80H392V92H420"/>
+ <path class="pot" d="M110 150H392V138H420"/><path class="cur" d="M110 190H420V140"/>
+ <rect x="398" y="100" width="44" height="40" rx="5" fill="var(--card)" stroke="currentColor" stroke-width="2"/><text x="420" y="125" text-anchor="middle" class="lbl">DUT</text>
+ <path class="grd" d="M110 235H600"/>
+ <g fill="currentColor"><circle cx="110" cy="40" r="4.5"/><circle cx="110" cy="80" r="4.5"/><circle cx="110" cy="150" r="4.5"/><circle cx="110" cy="190" r="4.5"/><circle cx="110" cy="235" r="4.5"/></g>
+ <text x="430" y="35">current goes in</text><text x="430" y="205">current comes back</text>
+ <text x="455" y="118">DUT = device under test</text><text x="455" y="136" class="mut">(your sample)</text>
+ <text x="300" y="255" class="mut">shield / guard of the fixture (⏚)</text>
+</svg>
+<figcaption><span style="color:var(--c2)">━━ thick</span>: current path (H CUR → sample → L CUR, where the current is measured) ·
+<span style="color:var(--c1)">── thin</span>: voltage sensing (H POT and L POT measure the voltage right at the sample) ·
+<span style="color:var(--c3)">- - -</span>: guard</figcaption>
+</figure>
 <ul>
 <li><b>H CUR</b> (high, current): the meter's AC source pushes the test current out.</li>
 <li><b>L CUR</b> (low, current): the current comes back here and is measured.</li>
@@ -351,7 +493,6 @@ resistance (GΩ) can only be measured with an insulation tester at DC.</p>
 <p><b>Rule:</b> H CUR and H POT meet at <b>one</b> side of the sample, L CUR and L POT at the <b>other</b> side, as close to
 the sample as possible. On the usual 4-terminal fixture: <b>red jacks = H side, blue jacks = L side,
 cyan/green jack = guard</b>. Check the labels of your fixture.</p>
-
 <h3>Good cabling, step by step</h3>
 <ol>
 <li>Use the <b>shortest</b> cables you can. Best is a fixture that plugs <b>directly</b> into the four BNC connectors.</li>
@@ -365,24 +506,27 @@ cyan/green jack = guard</b>. Check the labels of your fixture.</p>
 <p class="tip"><b>How to see if your cabling is good:</b> after calibrating, look at the SHORT values in the calibration file
 (or the log). A good short is a few tens of mΩ and some tens of nH. Long loose leads show up as about 0.2 Ω and
 0.3 µH or more, and limit accuracy above about 100 kHz.</p>
+</section>
 
-<!-- ================================================================== -->
-<a name="cal"></a>
-<h2>10. Fixture calibration (open / short) <span class="lvl">BEGINNER</span></h2>
+<section class="sec" id="cal" data-part="C" data-title="10. Fixture calibration (open / short)">
+<h2><span class="num">10</span> Fixture calibration (open / short) <span class="badge beg">BEGINNER</span></h2>
 <h3>Why calibrate?</h3>
 <p>Even with a 4-terminal connection, the fixture and the last few centimetres of wire add their own small
 impedance. Two effects matter:</p>
-<pre>
-                 Zs  (contacts + leads: small R and L in series)
-     H ●───────/\/\/───‿‿‿─────┬──────────────┬──────● H
-                                │              │
-                               Yo            [DUT]
-                    (stray C and leakage       │
-                     between the contacts)     │
-     L ●────────────────────────┴──────────────┴──────● L
-
-     meter side                                   sample side
-</pre>
+<figure>
+<svg viewBox="0 0 600 180" role="img" aria-label="Fixture residual model">
+ <text x="150" y="16" text-anchor="middle" class="lbl">Zs (contacts + leads: small R and L in series)</text>
+ <path class="w" d="M30 40H80M140 40H160M220 40H560M30 145H560M290 40V60M290 120V145M440 40V70M440 110V145"/>
+ <use href="#res" x="80" y="28" width="60" height="24"/><use href="#ind" x="160" y="28" width="60" height="24"/>
+ <g transform="translate(290,60) rotate(90)"><use href="#cap" y="-12" width="60" height="24"/></g>
+ <rect x="418" y="70" width="44" height="40" rx="5" fill="var(--card)" stroke="currentColor" stroke-width="2"/><text x="440" y="95" text-anchor="middle" class="lbl">DUT</text>
+ <g fill="var(--card)" stroke="currentColor" stroke-width="2"><circle cx="30" cy="40" r="4"/><circle cx="30" cy="145" r="4"/><circle cx="560" cy="40" r="4"/><circle cx="560" cy="145" r="4"/></g>
+ <g fill="currentColor"><circle cx="290" cy="40" r="3.5"/><circle cx="440" cy="40" r="3.5"/><circle cx="290" cy="145" r="3.5"/><circle cx="440" cy="145" r="3.5"/></g>
+ <text x="310" y="88" class="lbl">Yo</text><text x="310" y="106" class="mut">(stray C and leakage</text><text x="310" y="121" class="mut">between the contacts)</text>
+ <text x="14" y="44">H</text><text x="14" y="149">L</text><text x="570" y="44">H</text><text x="570" y="149">L</text>
+ <text x="30" y="172" class="mut">meter side</text><text x="480" y="172" class="mut">sample side</text>
+</svg>
+</figure>
 <ul>
 <li><b>Zs (series residual)</b> adds to every reading. It matters for <b>low impedances</b>: large capacitors,
     small inductors, small resistors, and everything at high frequency.</li>
@@ -395,9 +539,24 @@ impedance. Two effects matter:</p>
 <li><b>SHORT</b>: fixture terminals connected directly together → the meter sees only Zs.</li>
 </ol>
 <p>Then every reading of the sample, Zm, is corrected point by point:</p>
-<p class="eq">Zs   = Z_short<br>
-Yo   = 1 / (Z_open − Z_short)<br>
-Zdut = (Zm − Zs) / (1 − (Zm − Zs) · Yo)</p>
+<div class="eq">Zs &nbsp;&nbsp;= Z_short<br>Yo &nbsp;&nbsp;= 1 / (Z_open − Z_short)<br>Zdut = (Zm − Zs) / (1 − (Zm − Zs) · Yo)</div>
+
+<div class="widget" id="w-cal">
+ <div class="wt">Try it: what the fixture does to a capacitor, and what the correction gives back</div>
+ <div class="ctl">
+  <label>Sample C (F)<input type="text" id="oc-c" value="100n"></label>
+  <label>Sample ESR (Ω)<input type="text" id="oc-esr" value="0.05"></label>
+  <label>Lead R (Ω)<input type="text" id="oc-r" value="0.2"></label>
+  <label>Lead L (H)<input type="text" id="oc-l" value="300n"></label>
+  <label>Stray C (F)<input type="text" id="oc-s" value="13p"></label>
+ </div>
+ <canvas id="oc-plot" style="height:260px"></canvas>
+ <div class="out" id="oc-out"></div>
+ <p class="hint">Blue: the true Cs of the sample. Orange: what the meter reads without correction. Green dashed: after the
+ open/short correction, calculated from simulated OPEN and SHORT readings. The default values are those of the long loose
+ leads measured in the lab.</p>
+</div>
+
 <h3>Doing it right</h3>
 <ul>
 <li><b>No sample in the fixture</b> during either step.</li>
@@ -414,23 +573,25 @@ The CSV of every measurement records which calibration file was used.</p>
 <p class="tip"><b>Check:</b> the column <code>Z_raw_ohm</code> holds the reading before correction. If raw and corrected values are
 almost the same, the fixture effects were negligible for that sample; if they differ a lot (typically above 1 MHz
 or for very small/large impedances), the calibration was essential.</p>
+</section>
 
-<!-- ================================================================== -->
-<a name="signal"></a>
-<h2>11. Test signal and measurement settings <span class="lvl">BEGINNER</span></h2>
+<section class="sec" id="signal" data-part="C" data-title="11. Test signal and measurement settings">
+<h2><span class="num">11</span> Test signal and measurement settings <span class="badge beg">BEGINNER</span></h2>
 <h3>Level type</h3>
-<pre>
-  V  (open-circuit voltage)            CV (constant voltage)             CC (constant current)
-
-   ┌─────┐  R_out = 50 Ω                meter adjusts the source         meter adjusts the source
-   │  ~  ├──/\/\/──┬──●                 until the voltage AT THE         until the current THROUGH
-   │  V  │         │                    SAMPLE equals the set value      THE SAMPLE equals the set value
-   └──┬──┘       [DUT]
-      └────────────┴──●
-  set value = source voltage; the
-  sample sees less when its |Z| is small
-</pre>
-<table border="1" cellpadding="4" cellspacing="0">
+<div class="cards">
+ <div class="card"><h4>V (open-circuit voltage)</h4>
+  <svg viewBox="0 0 260 120" role="img" aria-label="V mode source with 50 ohm output resistance">
+   <circle cx="40" cy="60" r="20" class="w"/><text x="40" y="66" text-anchor="middle" font-size="18">~</text>
+   <path class="w" d="M40 40V20H80M140 20H190V45M190 85V100H40V80"/>
+   <use href="#res" x="80" y="8" width="60" height="24"/>
+   <rect x="172" y="45" width="36" height="40" rx="5" fill="var(--card)" stroke="currentColor" stroke-width="2"/><text x="190" y="70" text-anchor="middle" class="lbl">DUT</text>
+   <text x="110" y="48" text-anchor="middle" class="mut">R_out = 50 Ω</text><text x="12" y="64">V</text>
+  </svg>
+  <p>Set value = source voltage; the sample sees less when its |Z| is small.</p></div>
+ <div class="card"><h4>CV (constant voltage)</h4><p>The meter adjusts the source until the voltage <b>AT THE SAMPLE</b> equals the set value.</p></div>
+ <div class="card"><h4>CC (constant current)</h4><p>The meter adjusts the source until the current <b>THROUGH THE SAMPLE</b> equals the set value.</p></div>
+</div>
+<div class="tblwrap"><table>
 <tr><th>Mode</th><th>What it does</th><th>Use it for</th></tr>
 <tr><td><b>V</b></td><td>sets the source voltage behind the meter's 50 Ω output resistance; the voltage at the sample
     is V·|Z|/|Z + 50 Ω| (e.g. only about half of the set value for a 50 Ω sample)</td>
@@ -439,23 +600,36 @@ or for very small/large impedances), the calibration was essential.</p>
     <td>voltage-dependent parts: class 2 ceramic capacitors (X7R, Y5V), electrolytics, dielectric materials, sensors; comparing with datasheets (usually 1 V at 1 kHz, or 0.5 V at 120 Hz for large capacitors)</td></tr>
 <tr><td><b>CC</b></td><td>keeps the current through the sample constant</td>
     <td>current-dependent parts: inductors with iron or ferrite cores, chokes, transformers (use the datasheet test current); very low impedances</td></tr>
-</table>
+</table></div>
+
+<div class="widget" id="w-vmode">
+ <div class="wt">Try it: how much voltage reaches the sample in V mode?</div>
+ <div class="ctl">
+  <label>Set level V (V rms)<input type="text" id="vm-v" value="1"></label>
+  <label>Sample |Z| (Ω)<input type="text" id="vm-z" value="2"></label>
+  <label>Sample θ (°)<input type="text" id="vm-th" value="-30"></label>
+ </div>
+ <div class="out" id="vm-out"></div>
+ <p class="hint">Example: the 100 nF capacitor near its self-resonance (|Z| ≈ 2 Ω) gets only a few percent of the set voltage
+ in V mode. In CV mode it would get the full value.</p>
+</div>
+
 <h3>Level value: allowed range</h3>
-<table border="1" cellpadding="4" cellspacing="0">
+<div class="tblwrap"><table>
 <tr><th>Mode</th><th>up to 1 MHz</th><th>above 1 MHz</th></tr>
 <tr><td>V / CV</td><td>10 mV … 5 V</td><td>50 mV … 1 V</td></tr>
 <tr><td>CC</td><td>10 µA … 100 mA</td><td>50 µA … 20 mA</td></tr>
-</table>
+</table></div>
 <p>1 V is the usual choice. Use 10–100 mV for sensitive or non-linear samples (semiconductors, electrochemical
 or biological samples), and higher levels only on purpose (e.g. to study voltage dependence).</p>
 <h3>Speed</h3>
-<table border="1" cellpadding="4" cellspacing="0">
+<div class="tblwrap"><table>
 <tr><th>Speed</th><th>Time per reading</th><th>Use it for</th></tr>
 <tr><td>FAST</td><td>≈ 5 ms</td><td>quick overview, many points, locating a resonance</td></tr>
 <tr><td>NORMAL</td><td>≈ 21 ms</td><td>everyday measurements</td></tr>
 <tr><td>SLOW</td><td>≈ 72 ms</td><td>noisy readings; very high (MΩ) or very low (&lt; 1 Ω) impedances</td></tr>
 <tr><td>SLOW2</td><td>≈ 140 ms</td><td>best accuracy: low-loss parts (small D), dielectrics, results for publication</td></tr>
-</table>
+</table></div>
 <h3>Other settings</h3>
 <ul>
 <li><b>Averaging (meter)</b>: the meter averages N readings; noise drops by about √N, time rises N×.
@@ -469,10 +643,10 @@ or biological samples), and higher levels only on purpose (e.g. to study voltage
     frequency change. Keep it on.</li>
 </ul>
 <p class="warn">Changing the level type or level value means you must <b>calibrate again</b>.</p>
+</section>
 
-<!-- ================================================================== -->
-<a name="sweep"></a>
-<h2>12. Frequency sweep settings <span class="lvl">BEGINNER</span></h2>
+<section class="sec" id="sweep" data-part="C" data-title="12. Frequency sweep settings">
+<h2><span class="num">12</span> Frequency sweep settings <span class="badge beg">BEGINNER</span></h2>
 <ul>
 <li><b>Range:</b> 42 Hz … 5 MHz. Enter values with SI prefixes: <code>42</code>, <code>120</code>, <code>1k</code>,
     <code>2.5k</code>, <code>1M</code>, <code>5M</code>.</li>
@@ -489,11 +663,11 @@ or biological samples), and higher levels only on purpose (e.g. to study voltage
     steps, so the frequency in the data file is exactly the one the meter used (e.g. a requested 53.06 Hz
     becomes 53.1 Hz). Close points that round to the same frequency are measured only once.</li>
 </ul>
+</section>
 
-<!-- ================================================================== -->
-<a name="recipes"></a>
-<h2>13. Recipes for common measurements <span class="lvl">BEGINNER</span></h2>
-<table border="1" cellpadding="4" cellspacing="0">
+<section class="sec" id="recipes" data-part="C" data-title="13. Recipes for common measurements">
+<h2><span class="num">13</span> Recipes for common measurements <span class="badge beg">BEGINNER</span></h2>
+<div class="tblwrap"><table>
 <tr><th>Sample</th><th>Level</th><th>Speed / avg.</th><th>Settling</th><th>Plot</th><th>Notes</th></tr>
 <tr><td>Any part, quick check</td><td>V, 1 V</td><td>FAST / 1</td><td>20 ms</td><td>|Z|, θ</td><td>shows what the part is and where it resonates</td></tr>
 <tr><td>Ceramic capacitor</td><td>CV, 1 V</td><td>NORMAL / 1–4</td><td>50–100 ms</td><td>Cs, D</td><td>class 2 values depend on voltage, temperature and age</td></tr>
@@ -504,7 +678,7 @@ or biological samples), and higher levels only on purpose (e.g. to study voltage
 <tr><td>Resistor</td><td>V, 1 V</td><td>NORMAL</td><td>50 ms</td><td>Rs (low R) or Rp (high R), θ</td><td>θ shows parasitic L (θ &gt; 0) or C (θ &lt; 0)</td></tr>
 <tr><td>Dielectric / material</td><td>CV, 1 V</td><td>SLOW2 / 4–16</td><td>100–200 ms</td><td>Cp, D; Nyquist</td><td>3 readings / point for error bars; see section 18</td></tr>
 <tr><td>Sensitive / non-linear</td><td>CV, 10–50 mV</td><td>SLOW / 4–8</td><td>100 ms</td><td>depends</td><td>low level avoids changing the sample</td></tr>
-</table>
+</table></div>
 <h3>Example: checking a capacitor against its datasheet</h3>
 <ol>
 <li>Datasheet test condition is typically <b>1 kHz, 1 Vrms</b> (class 2 ceramic) → custom list including 1k, CV 1 V.</li>
@@ -513,10 +687,10 @@ or biological samples), and higher levels only on purpose (e.g. to study voltage
     (e.g. ±10 % = K, ±20 % = M), D below the limit.</li>
 <li>For a 100 nF X7R-type ceramic, about 100–110 nF and D ≈ 0.02 at 1 kHz is typical.</li>
 </ol>
+</section>
 
-<!-- ================================================================== -->
-<a name="plots"></a>
-<h2>14. Reading the plots <span class="lvl">BEGINNER</span></h2>
+<section class="sec" id="plots" data-part="C" data-title="14. Reading the plots">
+<h2><span class="num">14</span> Reading the plots <span class="badge beg">BEGINNER</span></h2>
 <ul>
 <li>Choose the parameter of each of the two plots with <b>Y axis</b>. <b>log f</b> and <b>log y</b> switch logarithmic
     axes; <b>|y|</b> plots the absolute value (needed for a log scale of negative quantities like X).</li>
@@ -525,7 +699,7 @@ or biological samples), and higher levels only on purpose (e.g. to study voltage
 <li>The line under the plots shows all main values of the last point.</li>
 </ul>
 <h3>Typical shapes</h3>
-<table border="1" cellpadding="4" cellspacing="0">
+<div class="tblwrap"><table>
 <tr><th>What you see</th><th>What it means</th></tr>
 <tr><td>|Z| falling with slope −1 (÷10 per decade), θ ≈ −90°</td><td>capacitive region</td></tr>
 <tr><td>|Z| rising with slope +1, θ ≈ +90°</td><td>inductive region</td></tr>
@@ -535,23 +709,43 @@ or biological samples), and higher levels only on purpose (e.g. to study voltage
 <tr><td>Cs constant then drifting up near the top of the range</td><td>approaching the SRF (lead inductance)</td></tr>
 <tr><td>D rising steadily with f</td><td>ESR dominates: D = ω·C·ESR</td></tr>
 <tr><td>D rising towards low f</td><td>leakage or conduction (dielectrics, electrolytics)</td></tr>
-</table>
-<h3>Nyquist plot (Z′ vs −Z″)</h3>
+</table></div>
+<h3 id="nyquist">Nyquist plot (Z′ vs −Z″)</h3>
 <p>Each point is the impedance arrow of one frequency: Z′ = Rs (horizontal), −Z″ = −X (vertical). Capacitive
 behaviour is plotted upwards.</p>
-<pre>
-  −Z″ ▲                                     ideal capacitor : vertical line on the axis
-      │        . ─ ─ .   ← top at ω = 1/(R·C)  series R + C   : vertical line at Z′ = R
-      │     .           .                   parallel R ‖ C : semicircle of diameter R
-      │   .               .                 two semicircles: two processes (e.g. grain
-      │  .                 .                                 and grain boundary)
-      └──●─────────────────●──────►  Z′     points below the axis: inductive
-        high f            low f  (=R)
-</pre>
+<figure>
+<svg viewBox="0 0 560 230" role="img" aria-label="Nyquist semicircle of a parallel RC">
+ <path class="ax" d="M50 15V190H540"/><text x="10" y="20">−Z″</text><text x="520" y="210">Z′</text>
+ <path class="crv" d="M125 190A160 160 0 0 1 445 190"/><circle cx="125" cy="190" r="4.5" fill="var(--c2)"/><circle cx="445" cy="190" r="4.5" fill="var(--c2)"/>
+ <circle cx="285" cy="30" r="4.5" fill="var(--c2)"/><text x="300" y="28" class="lbl">top at ω = 1/(R·C)</text>
+ <text x="125" y="212" text-anchor="middle" class="mut">high f</text><text x="445" y="212" text-anchor="middle" class="mut">low f (= R)</text>
+</svg>
+</figure>
+<ul>
+<li><b>ideal capacitor</b>: vertical line on the axis</li>
+<li><b>series R + C</b>: vertical line at Z′ = R</li>
+<li><b>parallel R ‖ C</b>: semicircle of diameter R</li>
+<li><b>two semicircles</b>: two processes (e.g. grain and grain boundary)</li>
+<li><b>points below the axis</b>: inductive</li>
+</ul>
+<div class="widget" id="w-nyq">
+ <div class="wt">Try it: Nyquist explorer  R0 + (R1 ‖ C1) + (R2 ‖ C2)</div>
+ <div class="ctl">
+  <label>R0 (Ω)<input type="text" id="ny-r0" value="100"></label>
+  <label>R1 (Ω)<input type="text" id="ny-r1" value="10k"></label>
+  <label>C1 (F)<input type="text" id="ny-c1" value="10n"></label>
+  <label>R2 (Ω, 0 = off)<input type="text" id="ny-r2" value="5k"></label>
+  <label>C2 (F)<input type="text" id="ny-c2" value="1u"></label>
+ </div>
+ <canvas id="ny-plot" style="height:300px"></canvas>
+ <div class="out" id="ny-out"></div>
+ <p class="hint">Solid points: inside the 3532-50 range (42 Hz – 5 MHz). Faint line: the rest of the spectrum, which the meter cannot reach.</p>
+</div>
+</section>
 
-<!-- ================================================================== -->
-<a name="files"></a>
-<h2>15. Data files <span class="lvl">BEGINNER</span></h2>
+<!-- ======================================================= PART D -->
+<section class="sec" id="files" data-part="D" data-title="15. Data files">
+<h2><span class="num">15</span> Data files <span class="badge beg">BEGINNER</span></h2>
 <ul>
 <li>With <b>Auto-save every point to CSV</b> ticked, each point is written as soon as it is measured.
     Nothing is lost if the PC crashes.</li>
@@ -561,8 +755,7 @@ behaviour is plotted upwards.</p>
     <b>File → Save plots as image…</b>: PNG files of both plots and the Nyquist plot.</li>
 </ul>
 <h3>CSV layout</h3>
-<pre>
-# sample: C100nF                     ← metadata lines start with #
+<pre class="code"><code># sample: C100nF                     ← metadata lines start with #
 # operator: JDoe
 # test_number: 3
 # level_mode: CV
@@ -570,20 +763,17 @@ behaviour is plotted upwards.</p>
 …
 index,freq_set_Hz,freq_Hz,Z_ohm,theta_deg,Rs_ohm,X_ohm,Ls_H,Cs_F,Rp_ohm,Lp_H,Cp_F,Y_S,G_S,B_S,D,Q,
       Z_std,theta_std,Z_raw_ohm,theta_raw_deg,timestamp
-0,100,100,15920.2,-89.98,…
-</pre>
+0,100,100,15920.2,-89.98,…</code></pre>
 <p>Reading the data in Python:</p>
-<pre>
-import pandas as pd
+<pre class="code"><code>import pandas as pd
 df = pd.read_csv("20261123_181057_C100nF_JDoe_T3.csv", comment="#")
-df.plot(x="freq_Hz", y="Cs_F", logx=True)
-</pre>
+df.plot(x="freq_Hz", y="Cs_F", logx=True)</code></pre>
 <p>In Excel: open the CSV directly (the # lines appear at the top). In Origin: import as CSV with "#" as comment
 character.</p>
+</section>
 
-<!-- ================================================================== -->
-<a name="accuracy"></a>
-<h2>16. Accuracy and good practice <span class="lvl">BEGINNER</span></h2>
+<section class="sec" id="accuracy" data-part="D" data-title="16. Accuracy and good practice">
+<h2><span class="num">16</span> Accuracy and good practice <span class="badge beg">BEGINNER</span></h2>
 <ul>
 <li>The meter is most accurate for <b>medium impedances</b> (roughly 10 Ω … 100 kΩ). Very small (&lt; 1 Ω) and
     very large (&gt; 10 MΩ) impedances, and frequencies above 1 MHz, are harder: use SLOW2, averaging,
@@ -598,7 +788,7 @@ character.</p>
     The spread shows how much of the result is contact and handling, not the part.</li>
 <li>Let the meter warm up for at least 30–60 minutes before precise measurements.</li>
 </ul>
-<h3>Traceability: can the result be trusted in a report?</h3>
+<h3 id="trace">Traceability: can the result be trusted in a report?</h3>
 <p>A result is only traceable when the <b>meter itself</b> is calibrated (by a calibration lab, usually every
 year; see the sticker on the meter) and you can show which meter was used. The program helps:</p>
 <ul>
@@ -613,11 +803,11 @@ year; see the sticker on the meter) and you can show which meter was used. The p
     accuracy (basic accuracy ±0.08 % for |Z| and ±0.05° for θ, larger at the edges of the ranges and above
     1 MHz; see Hioki's accuracy tables), and add the repeatability you measured.</li>
 </ul>
+</section>
 
-<!-- ================================================================== -->
-<a name="trouble"></a>
-<h2>17. Troubleshooting</h2>
-<table border="1" cellpadding="4" cellspacing="0">
+<section class="sec" id="trouble" data-part="D" data-title="17. Troubleshooting">
+<h2><span class="num">17</span> Troubleshooting</h2>
+<div class="tblwrap"><table>
 <tr><th>Problem</th><th>Likely cause</th><th>What to do</th></tr>
 <tr><td>"No VISA resources found"</td><td>VISA library or adapter driver missing; adapter unplugged</td><td>check the KUSB-488A driver and VISA (Keithley KI-VISA or NI-VISA); try the interface "GPIB DLL"</td></tr>
 <tr><td>Connect fails / timeout</td><td>wrong address, cable, meter off</td><td>check the GPIB address in the meter's interface settings; try GPIB1 instead of GPIB0; <b>Scan</b></td></tr>
@@ -630,39 +820,48 @@ year; see the sticker on the meter) and you can show which meter was used. The p
 <tr><td>Result differs from the datasheet</td><td>different test conditions</td><td>use the datasheet frequency, level (CV), temperature; class 2 ceramics: voltage and age</td></tr>
 <tr><td>Sweep is slow</td><td>auto-ranging, settling delay, SLOW speeds</td><td>FAST / NORMAL, fewer points, shorter settling</td></tr>
 <tr><td>"Command rejected" messages</td><td>meter firmware uses a different command</td><td>Tools → Verify command profile; edit the JSON profile (section 18)</td></tr>
-</table>
+</table></div>
+</section>
 
-<!-- ================================================================== -->
-<a name="advanced"></a>
-<h2>18. Advanced topics <span class="adv">ADVANCED</span></h2>
-
-<h3>18.1 Derivation of the parameters</h3>
+<section class="sec" id="advanced" data-part="D" data-title="18. Advanced topics">
+<h2><span class="num">18</span> Advanced topics <span class="badge adv">ADVANCED</span></h2>
+<h3 id="adv1">18.1 Derivation of the parameters</h3>
 <p>With the measured phasor Z = |Z|·e<sup>jθ</sup>:</p>
-<p class="eq">Z  = Rs + jX       Rs = |Z| cos θ,   X = |Z| sin θ<br>
-Y  = 1/Z = G + jB  G = cos θ / |Z|,  B = −sin θ / |Z|<br>
-X  = ωLs = −1/(ωCs)   →   Ls = X/ω,   Cs = −1/(ωX)<br>
-B  = ωCp = −1/(ωLp)   →   Cp = B/ω,   Lp = −1/(ωB)<br>
-D  = tan δ = |Rs/X| = |G/B| = |cot θ|,   Q = 1/D,   δ = 90° − |θ|</p>
+<div class="eq">Z &nbsp;= Rs + jX &nbsp;&nbsp;&nbsp;&nbsp; Rs = |Z| cos θ, &nbsp; X = |Z| sin θ<br>
+Y &nbsp;= 1/Z = G + jB &nbsp; G = cos θ / |Z|, &nbsp;B = −sin θ / |Z|<br>
+X &nbsp;= ωLs = −1/(ωCs) &nbsp; → &nbsp; Ls = X/ω, &nbsp; Cs = −1/(ωX)<br>
+B &nbsp;= ωCp = −1/(ωLp) &nbsp; → &nbsp; Cp = B/ω, &nbsp; Lp = −1/(ωB)<br>
+D &nbsp;= tan δ = |Rs/X| = |G/B| = |cot θ|, &nbsp; Q = 1/D, &nbsp; δ = 90° − |θ|</div>
 <p>D is the same in both models because Rs/X and G/B are both equal to cot θ.</p>
-
-<h3>18.2 Open/short correction in detail</h3>
+<h3 id="adv2">18.2 Open/short correction in detail</h3>
 <p>The fixture is modelled as a series impedance Zs followed by a shunt admittance Yo (an "L-network"):</p>
-<p class="eq">Zm = Zs + 1 / (Yo + 1/Zdut)<br>
-SHORT (Zdut = 0):  Z_short = Zs<br>
-OPEN  (Zdut = ∞):  Z_open  = Zs + 1/Yo   →   Yo = 1/(Z_open − Z_short)<br>
-solve for Zdut:    Zdut = (Zm − Zs) / (1 − (Zm − Zs)·Yo)</p>
+<div class="eq">Zm = Zs + 1 / (Yo + 1/Zdut)<br>
+SHORT (Zdut = 0): &nbsp;Z_short = Zs<br>
+OPEN &nbsp;(Zdut = ∞): &nbsp;Z_open &nbsp;= Zs + 1/Yo &nbsp; → &nbsp; Yo = 1/(Z_open − Z_short)<br>
+solve for Zdut: &nbsp;&nbsp;&nbsp;Zdut = (Zm − Zs) / (1 − (Zm − Zs)·Yo)</div>
 <p>The correction is applied to the complex mean of each point. If the OPEN reading overflowed at some frequency
 (typically below 100 Hz), Yo is taken as 0 there, which is correct because the stray admittance is then negligible.
 A third standard (LOAD correction with a known reference part) would also remove gain and phase errors of the
 cables; it is not implemented.</p>
-
-<h3>18.3 Dielectric and material measurements</h3>
+<h3 id="adv3">18.3 Dielectric and material measurements</h3>
 <p>For a flat sample of thickness d between parallel electrodes of area A:</p>
-<p class="eq">C₀   = ε₀ · A / d          (empty-capacitor value; ε₀ = 8.854·10⁻¹² F/m)<br>
-ε′   = Cp / C₀ = Cp · d / (ε₀ · A)   (relative permittivity, real part)<br>
-ε″   = ε′ · D                      (loss part)<br>
-σ_ac = ω · ε₀ · ε″                  (AC conductivity, S/m)<br>
-M*   = 1/ε*  (electric modulus: M′ = ε′/(ε′²+ε″²),  M″ = ε″/(ε′²+ε″²))</p>
+<div class="eq">C₀ &nbsp;&nbsp;= ε₀ · A / d &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (empty-capacitor value; ε₀ = 8.854·10⁻¹² F/m)<br>
+ε′ &nbsp;&nbsp;= Cp / C₀ = Cp · d / (ε₀ · A) &nbsp; (relative permittivity, real part)<br>
+ε″ &nbsp;&nbsp;= ε′ · D &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (loss part)<br>
+σ_ac = ω · ε₀ · ε″ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (AC conductivity, S/m)<br>
+M* &nbsp;&nbsp;= 1/ε* &nbsp;(electric modulus: M′ = ε′/(ε′²+ε″²), &nbsp;M″ = ε″/(ε′²+ε″²))</div>
+<div class="widget" id="w-diel">
+ <div class="wt">Try it: dielectric calculator</div>
+ <div class="ctl">
+  <label>Cp (F)<input type="text" id="dc-cp" value="12p"></label>
+  <label>D<input type="text" id="dc-d" value="0.02"></label>
+  <label>Thickness d (mm)<input type="text" id="dc-t" value="1"></label>
+  <label>Electrode diameter (mm)<input type="text" id="dc-dia" value="20"></label>
+  <label>f (Hz)<input type="text" id="dc-f" value="1k"></label>
+ </div>
+ <div class="out" id="dc-out"></div>
+ <p class="hint">Circular electrodes: A = π·(diameter/2)². Edge fields are ignored (see the notes below).</p>
+</div>
 <ul>
 <li>Use <b>Cp and D</b> (parallel model), CV mode, SLOW2 and averaging.</li>
 <li>Edge (fringe) fields make C larger than ε₀A/d predicts, especially when d is not much smaller than the
@@ -672,23 +871,19 @@ M*   = 1/ε*  (electric modulus: M′ = ε′/(ε′²+ε″²),  M″ = ε″/(
     Nyquist or Cole-Cole (ε″ vs ε′) plot. Conduction shows as ε″ rising as 1/f towards low frequencies.
     The simulator has a "Dielectric sample (Debye relaxation)" model to practise with.</li>
 </ul>
-
-<h3>18.4 Impedance spectroscopy and equivalent-circuit fitting</h3>
+<h3 id="adv4">18.4 Impedance spectroscopy and equivalent-circuit fitting</h3>
 <p>The CSV contains everything needed to fit equivalent circuits in external software
 (e.g. Python <code>impedance.py</code>, ZView, EC-Lab): use <code>freq_Hz</code>, <code>Rs_ohm</code> (Z′) and
 <code>X_ohm</code> (Z″). For electrochemical systems, use a low CV level (10 mV) so that the response stays
 linear. This program applies no DC bias, so electrochemical cells are measured at their open-circuit
 state.</p>
-
-<h3>18.5 How the program talks to the meter</h3>
+<h3 id="adv5">18.5 How the program talks to the meter</h3>
 <p>The program uses GPIB through the Keithley KUSB-488A adapter, either via VISA (resource
 <code>GPIB0::1::INSTR</code>) or by calling the adapter driver's GPIB DLL (<code>gpib488.dll</code>, <code>ni4882.dll</code>) directly. One sweep point is:</p>
-<pre>
-:FREQuency 1.00000E+03      set the frequency
+<pre class="code"><code>:FREQuency 1.00000E+03      set the frequency
 (settling delay)
 *TRG                        trigger one fresh measurement (external trigger mode)
-:MEASure?                   →  1.2552E+07,-87.45      (|Z| in Ω, θ in degrees)
-</pre>
+:MEASure?                   →  1.2552E+07,-87.45      (|Z| in Ω, θ in degrees)</code></pre>
 <p>At the start of a sweep the program sends <code>:HEADer OFF</code>, <code>:MEASure:ITEM 5,0</code> (return |Z| and θ),
 <code>:RANGe:AUTO ON</code>, speed, averaging, level and <code>:TRIGger EXTernal</code>; at the end
 <code>:TRIGger INTernal</code> returns the meter to free-running mode.</p>
@@ -702,16 +897,14 @@ state.</p>
 <li>The <b>Simulator</b> interface imitates a 3532-50 with selectable test components, for training without
     hardware.</li>
 </ul>
-
-<h3>18.6 Speed versus quality</h3>
+<h3 id="adv6">18.6 Speed versus quality</h3>
 <p>Time per point ≈ settling delay + readings/point × (averaging × measuring time + GPIB and auto-range overhead).
 Auto-ranging adds the most when |Z| changes a lot between points. For long series of identical samples, a
 custom frequency list with only the frequencies you need is the fastest option.</p>
-
-<h3>18.7 Instrument specifications used by the program</h3>
+<h3 id="adv7">18.7 Instrument specifications used by the program</h3>
 <p>From the Hioki 3532-50 datasheet. The program rounds frequencies to the meter's steps and warns before a
 sweep when the level is outside these limits.</p>
-<table border="1" cellpadding="4" cellspacing="0">
+<div class="tblwrap"><table>
 <tr><th>Item</th><th>Specification</th></tr>
 <tr><td>Frequency</td><td>42 Hz – 5 MHz (±0.005 %); steps 0.1 Hz (&lt; 1 kHz), 1 Hz (&lt; 10 kHz), 10 Hz (&lt; 100 kHz),
     100 Hz (&lt; 1 MHz), 1 kHz (1–5 MHz)</td></tr>
@@ -726,12 +919,12 @@ sweep when the level is outside these limits.</p>
 <tr><td>DC bias</td><td>only with an external bias option, ±40 V max. (not used by this program)</td></tr>
 <tr><td>Safety / EMC</td><td>EN 61010-1; measurement terminals overvoltage category I; EN 61326-1</td></tr>
 <tr><td>Interfaces</td><td>GP-IB (9518-01 board) or RS-232C (option); this program uses GP-IB</td></tr>
-</table>
+</table></div>
+</section>
 
-<!-- ================================================================== -->
-<a name="glossary"></a>
-<h2>19. Glossary</h2>
-<table border="1" cellpadding="4" cellspacing="0">
+<section class="sec" id="glossary" data-part="D" data-title="19. Glossary">
+<h2><span class="num">19</span> Glossary</h2>
+<div class="tblwrap"><table>
 <tr><td><b>AC</b></td><td>alternating current/voltage; here a sine wave of the chosen frequency</td></tr>
 <tr><td><b>Admittance Y</b></td><td>1/Z, in siemens (S); G + jB</td></tr>
 <tr><td><b>Conductance G</b></td><td>real part of Y; the "loss" part in the parallel model</td></tr>
@@ -749,7 +942,210 @@ sweep when the level is outside these limits.</p>
 <tr><td><b>SRF, f₀</b></td><td>self-resonant frequency where the part's L and C cancel (θ = 0°)</td></tr>
 <tr><td><b>Susceptance B</b></td><td>imaginary part of Y</td></tr>
 <tr><td><b>VISA / GPIB</b></td><td>the software layer and the cable bus used to talk to the meter</td></tr>
-</table>
+</table></div>
 <p><a href="#top">↑ Back to the top</a></p>
+</section>
+
+</main>
+</div>
+<footer>LCR Sweep · © 2026 arshadthottappali · This manual works offline. Press Ctrl+P to print (all sections are printed).</footer>
+
+<script>
+"use strict";
+/* ---------------------------------------------------------------- navigation */
+const secs=[...document.querySelectorAll("section.sec")];
+const PART={A:"Getting started",B:"Understanding impedance",C:"Doing it right",D:"Reference",all:"All sections"};
+let part="A";
+function showPart(p){
+  part=p;
+  secs.forEach(s=>s.style.display=(p==="all"||s.dataset.part===p)?"":"none");
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.p===p));
+  buildToc(); drawAll();
+}
+function buildToc(){
+  const toc=document.getElementById("toc"); toc.innerHTML=`<div class="ptitle">${PART[part]}</div>`;
+  secs.filter(s=>s.style.display!=="none").forEach(s=>{
+    const a=document.createElement("a"); a.href="#"+s.id; a.textContent=s.dataset.title; a.dataset.id=s.id; toc.appendChild(a);
+    s.querySelectorAll("h3[id]").forEach(h=>{const b=document.createElement("a"); b.href="#"+h.id; b.className="sub"; b.textContent=h.textContent; b.dataset.id=s.id; toc.appendChild(b);});
+  });
+  spy();
+}
+function goTo(id){
+  const el=document.getElementById(id); if(!el){return;}
+  const sec=el.closest("section.sec");
+  if(sec&&sec.style.display==="none"){showPart(sec.dataset.part);}
+  requestAnimationFrame(()=>el.scrollIntoView({behavior:"smooth",block:"start"}));
+}
+document.getElementById("tabs").addEventListener("click",e=>{const b=e.target.closest("button"); if(!b)return; showPart(b.dataset.p); window.scrollTo({top:0});});
+window.addEventListener("hashchange",()=>goTo(location.hash.slice(1)));
+document.addEventListener("click",e=>{const a=e.target.closest('a[href^="#"]'); if(!a)return; const id=a.getAttribute("href").slice(1);
+  if(id==="top"){e.preventDefault(); window.scrollTo({top:0,behavior:"smooth"}); return;}
+  e.preventDefault(); history.replaceState(null,"","#"+id); goTo(id); document.getElementById("results").style.display="none";});
+function spy(){
+  let cur=null; for(const s of secs){ if(s.style.display==="none")continue; const r=s.getBoundingClientRect(); if(r.top<170)cur=s.id; }
+  document.querySelectorAll("#toc a").forEach(a=>a.classList.toggle("act",!a.classList.contains("sub")&&a.dataset.id===cur));
+}
+window.addEventListener("scroll",spy,{passive:true});
+window.addEventListener("beforeprint",()=>secs.forEach(s=>s.style.display=""));
+window.addEventListener("afterprint",()=>showPart(part));
+
+/* ---------------------------------------------------------------- search */
+const q=document.getElementById("q"), res=document.getElementById("results");
+const index=secs.map(s=>({id:s.id,title:s.dataset.title,text:s.innerText.replace(/\s+/g," ")}));
+q.addEventListener("input",()=>{
+  const t=q.value.trim().toLowerCase(); if(t.length<2){res.style.display="none";return;}
+  const hits=[]; for(const it of index){const i=it.text.toLowerCase().indexOf(t); if(i>=0){
+    const n=(it.text.toLowerCase().split(t).length-1);
+    hits.push(`<a href="#${it.id}">${it.title}<small>${n} match${n>1?"es":""} · …${esc(it.text.slice(Math.max(0,i-50),i+70))}…</small></a>`);}}
+  res.innerHTML=hits.join("")||'<a href="#top">No results<small>Try another word</small></a>'; res.style.display="block";
+});
+q.addEventListener("keydown",e=>{if(e.key==="Escape"){q.value="";res.style.display="none";} if(e.key==="Enter"){const a=res.querySelector("a"); if(a)a.click();}});
+document.addEventListener("click",e=>{if(!e.target.closest(".search"))res.style.display="none";});
+function esc(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+
+/* ---------------------------------------------------------------- maths helpers */
+const SI={f:1e-15,p:1e-12,n:1e-9,u:1e-6,"µ":1e-6,m:1e-3,"":1,k:1e3,K:1e3,M:1e6,G:1e9};
+function num(id){const s=document.getElementById(id).value.trim().replace(/\s+/g,"").replace(/(Hz|hz|V|A|Ω|ohm|F|H|S|s)$/,"");
+  const m=s.match(/^([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)([fpnuµmkKMG]?)$/); return m?parseFloat(m[1])*SI[m[2]]:NaN;}
+function si(v,u="",d=4){ if(v===null||!isFinite(v))return "—"; if(v===0)return "0 "+u;
+  const P={"-15":"f","-12":"p","-9":"n","-6":"µ","-3":"m","0":"","3":"k","6":"M","9":"G","12":"T"};
+  let e=Math.floor(Math.log10(Math.abs(v))/3)*3; e=Math.max(-15,Math.min(12,e)); return +(v/10**e).toPrecision(d)+" "+P[e]+u;}
+const C=(re,im=0)=>({re,im});
+const cadd=(a,b)=>C(a.re+b.re,a.im+b.im), csub=(a,b)=>C(a.re-b.re,a.im-b.im);
+const cmul=(a,b)=>C(a.re*b.re-a.im*b.im,a.re*b.im+a.im*b.re);
+const cdiv=(a,b)=>{const d=b.re*b.re+b.im*b.im; return C((a.re*b.re+a.im*b.im)/d,(a.im*b.re-a.re*b.im)/d);};
+const cinv=a=>cdiv(C(1),a), cabs=a=>Math.hypot(a.re,a.im), carg=a=>Math.atan2(a.im,a.re)*180/Math.PI;
+const par=(a,b)=>cdiv(cmul(a,b),cadd(a,b));
+const W=f=>2*Math.PI*f;
+function derive(z,th,f){ const t=th*Math.PI/180, w=W(f), rs=z*Math.cos(t), x=z*Math.sin(t), y=1/z, g=y*Math.cos(t), b=-y*Math.sin(t);
+  return {Z:z,theta:th,Rs:rs,X:x,Ls:x/w,Cs:-1/(w*x),Rp:1/g,Lp:-1/(w*b),Cp:b/w,Y:y,G:g,B:b,D:Math.abs(rs/x),Q:Math.abs(x/rs)};}
+function logspace(a,b,n){const r=[];for(let i=0;i<n;i++)r.push(10**(Math.log10(a)+(Math.log10(b)-Math.log10(a))*i/(n-1)));return r;}
+function outGrid(id,items){document.getElementById(id).innerHTML=items.map(([k,v])=>`<div><b>${k}</b><span>${v}</span></div>`).join("");}
+function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+
+/* ---------------------------------------------------------------- plotting */
+function prep(cv){const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight; if(!w)return null;
+  cv.width=w*dpr; cv.height=h*dpr; const x=cv.getContext("2d"); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,w,h); return {x,w,h};}
+function ticks(min,max,log){ if(log){const r=[];for(let e=Math.floor(Math.log10(min));e<=Math.ceil(Math.log10(max));e++){const v=10**e; if(v>=min*0.999&&v<=max*1.001)r.push(v);}return r;}
+  const span=max-min, st=10**Math.floor(Math.log10(span/5)), m=[1,2,5,10].find(k=>span/(k*st)<=6)*st; const r=[];
+  for(let v=Math.ceil(min/m)*m; v<=max+1e-9*span; v+=m)r.push(+v.toPrecision(10)); return r;}
+function plot(cv,series,o){
+  const p=prep(cv); if(!p)return; const {x,w,h}=p; const L=62,R=12,T=12,B=36, pw=w-L-R, ph=h-T-B;
+  let xs=[],ys=[]; series.forEach(s=>s.pts.forEach(([a,b])=>{if(isFinite(a)&&isFinite(b)&&(!o.logx||a>0)&&(!o.logy||b>0)){xs.push(a);ys.push(b);}}));
+  if(!xs.length)return;
+  let x0=o.xmin??Math.min(...xs), x1=o.xmax??Math.max(...xs), y0=o.ymin??Math.min(...ys), y1=o.ymax??Math.max(...ys);
+  if(o.logy){y0=10**Math.floor(Math.log10(y0)); y1=10**Math.ceil(Math.log10(y1)); if(y1/y0<100){y1*=10;}}
+  else if(o.ymin===undefined){const pad=(y1-y0||1)*0.08; y0-=pad; y1+=pad;}
+  if(o.equal){const sx=(x1-x0)/pw, sy=(y1-y0)/ph; if(sx>sy){const c=(y0+y1)/2, hh=sx*ph/2; y0=c-hh; y1=c+hh;} else {const c=(x0+x1)/2, hw=sy*pw/2; x0=c-hw; x1=c+hw;}}
+  const fx=v=>L+(o.logx?(Math.log10(v)-Math.log10(x0))/(Math.log10(x1)-Math.log10(x0)):(v-x0)/(x1-x0))*pw;
+  const fy=v=>T+ph-(o.logy?(Math.log10(v)-Math.log10(y0))/(Math.log10(y1)-Math.log10(y0)):(v-y0)/(y1-y0))*ph;
+  x.font="11px Segoe UI, Arial"; x.lineWidth=1; x.strokeStyle=cssv("--grid"); x.fillStyle=cssv("--muted");
+  if(o.logx){for(let e=Math.floor(Math.log10(x0));e<Math.log10(x1);e++)for(let k=2;k<10;k++){const v=k*10**e; if(v>x0&&v<x1){x.globalAlpha=.45;x.beginPath();x.moveTo(fx(v),T);x.lineTo(fx(v),T+ph);x.stroke();x.globalAlpha=1;}}}
+  ticks(x0,x1,o.logx).forEach(v=>{x.beginPath();x.moveTo(fx(v),T);x.lineTo(fx(v),T+ph);x.stroke();x.textAlign="center";x.fillText(o.xfmt?o.xfmt(v):si(v,"",3),fx(v),T+ph+14);});
+  ticks(y0,y1,o.logy).forEach(v=>{x.beginPath();x.moveTo(L,fy(v));x.lineTo(L+pw,fy(v));x.stroke();x.textAlign="right";x.fillText(o.yfmt?o.yfmt(v):si(v,"",3),L-6,fy(v)+4);});
+  x.strokeStyle=cssv("--axis"); x.strokeRect(L,T,pw,ph);
+  x.fillStyle=cssv("--ink"); x.textAlign="center"; x.fillText(o.xl||"",L+pw/2,h-6);
+  x.save(); x.translate(13,T+ph/2); x.rotate(-Math.PI/2); x.fillText(o.yl||"",0,0); x.restore();
+  x.save(); x.beginPath(); x.rect(L,T,pw,ph); x.clip();
+  series.forEach(s=>{ x.strokeStyle=s.color; x.fillStyle=s.color; x.lineWidth=s.w||2.2; x.globalAlpha=s.alpha||1; x.setLineDash(s.dash||[]);
+    x.beginPath(); let on=false; s.pts.forEach(([a,b])=>{ if(!isFinite(a)||!isFinite(b)||(o.logx&&a<=0)||(o.logy&&b<=0)){on=false;return;} const X=fx(a),Y=fy(b); if(on)x.lineTo(X,Y); else {x.moveTo(X,Y);on=true;}});
+    if(!s.dots)x.stroke(); else s.pts.forEach(([a,b])=>{if(isFinite(a)&&isFinite(b)){x.beginPath();x.arc(fx(a),fy(b),2.6,0,7);x.fill();}});
+    x.setLineDash([]); x.globalAlpha=1; });
+  if(o.mark!==undefined){x.strokeStyle=cssv("--c2");x.lineWidth=1.5;x.setLineDash([4,4]);x.beginPath();x.moveTo(fx(o.mark),T);x.lineTo(fx(o.mark),T+ph);x.stroke();x.setLineDash([]);}
+  if(o.zero){x.strokeStyle=cssv("--axis");x.beginPath();x.moveTo(L,fy(0));x.lineTo(L+pw,fy(0));x.stroke();}
+  x.restore();
+  if(o.legend){let lx=L+10; o.legend.forEach(([t,c])=>{x.fillStyle=c;x.fillRect(lx,T+8,14,3);x.fillStyle=cssv("--ink");x.textAlign="left";x.fillText(t,lx+18,T+12);lx+=x.measureText(t).width+34;});}
+}
+
+/* ---------------------------------------------------------------- widget 1: phasor */
+function drawPhasor(){
+  const th=+document.getElementById("ph-th").value, z=num("ph-z");
+  document.getElementById("ph-val").textContent=(th>0?"+":th<0?"−":"")+Math.abs(th)+"°";
+  const v=[],i=[]; for(let k=0;k<=400;k++){const t=k/400*4*Math.PI; v.push([t/(2*Math.PI),Math.sin(t)]); i.push([t/(2*Math.PI),0.75*Math.sin(t-th*Math.PI/180)]);}
+  plot(document.getElementById("ph-wave"),[{pts:v,color:cssv("--c1")},{pts:i,color:cssv("--c2")}],{xmin:0,xmax:2,ymin:-1.2,ymax:1.2,xl:"time (periods)",yl:"amplitude",xfmt:v=>v.toFixed(1),yfmt:v=>v.toFixed(1),legend:[["voltage",cssv("--c1")],["current",cssv("--c2")]]});
+  const p=prep(document.getElementById("ph-arrow")); if(p){ const {x,w,h}=p, cx=w*0.3, cy=h/2, r=Math.min(w*0.55,h*0.42), t=th*Math.PI/180;
+    x.strokeStyle=cssv("--axis"); x.lineWidth=1.2; x.beginPath(); x.moveTo(20,cy); x.lineTo(w-15,cy); x.moveTo(cx,10); x.lineTo(cx,h-10); x.stroke();
+    x.fillStyle=cssv("--muted"); x.font="12px Segoe UI, Arial"; x.fillText("R",w-25,cy-6); x.fillText("+X (inductive)",cx+6,20); x.fillText("−X (capacitive)",cx+6,h-14);
+    const ex=cx+r*Math.cos(t), ey=cy-r*Math.sin(t);
+    x.setLineDash([4,4]); x.strokeStyle=cssv("--muted"); x.beginPath(); x.moveTo(ex,ey); x.lineTo(ex,cy); x.moveTo(ex,ey); x.lineTo(cx,ey); x.stroke(); x.setLineDash([]);
+    x.strokeStyle=cssv("--c3"); x.lineWidth=4; x.beginPath(); x.moveTo(cx,cy); x.lineTo(cx+r*Math.cos(t),cy); x.stroke();
+    x.strokeStyle=cssv("--c4"); x.beginPath(); x.moveTo(cx+r*Math.cos(t),cy); x.lineTo(ex,ey); x.stroke();
+    x.strokeStyle=cssv("--c1"); x.lineWidth=3; x.beginPath(); x.moveTo(cx,cy); x.lineTo(ex,ey); x.stroke();
+    const a=Math.atan2(ey-cy,ex-cx); x.fillStyle=cssv("--c1"); x.beginPath(); x.moveTo(ex,ey); x.lineTo(ex-12*Math.cos(a-0.4),ey-12*Math.sin(a-0.4)); x.lineTo(ex-12*Math.cos(a+0.4),ey-12*Math.sin(a+0.4)); x.fill();
+    x.fillStyle=cssv("--ink"); x.font="bold 13px Segoe UI, Arial"; x.fillText("|Z|",(cx+ex)/2-24,(cy+ey)/2); x.fillStyle=cssv("--c3"); x.fillText("R",cx+r*Math.cos(t)/2,cy+(th<0?-8:18)); x.fillStyle=cssv("--c4"); x.fillText("X",ex+6,(cy+ey)/2);}
+  const kind=Math.abs(th)<3?"a resistor":th>=87?"an ideal inductor":th<=-87?"an ideal capacitor":th>0?"inductive (R + L)":"capacitive (R + C)";
+  outGrid("ph-out",[["R = |Z|·cos θ",si(z*Math.cos(th*Math.PI/180),"Ω")],["X = |Z|·sin θ",si(z*Math.sin(th*Math.PI/180),"Ω")],["Current is…",th>0?"lagging (behind)":th<0?"leading (ahead)":"in step"],["Behaves like",kind]]);
+}
+
+/* ---------------------------------------------------------------- widget 2: impedance explorer */
+const FMIN=42, FMAX=5e6;
+function ieZ(type,f){ const w=W(f);
+  switch(type){ case "r":return C(num("ie-r")); case "c":return C(0,-1/(w*num("ie-c"))); case "l":return C(0,w*num("ie-l"));
+    case "rc":return C(num("ie-esr"),w*num("ie-esl")-1/(w*num("ie-c")));
+    case "rl":return par(C(num("ie-dcr"),w*num("ie-l")),C(0,-1/(w*num("ie-cp")))); } }
+function drawImp(){
+  const type=document.getElementById("ie-type").value;
+  document.querySelectorAll("#w-imp [data-for]").forEach(l=>l.style.display=l.dataset.for.split(" ").includes(type)?"":"none");
+  const fr=10**(Math.log10(FMIN)+(Math.log10(FMAX)-Math.log10(FMIN))*document.getElementById("ie-f").value/1000);
+  document.getElementById("ie-fv").textContent=si(fr,"Hz",3);
+  const fs=logspace(FMIN,FMAX,300), zs=fs.map(f=>ieZ(type,f));
+  plot(document.getElementById("ie-z"),[{pts:fs.map((f,i)=>[f,cabs(zs[i])]),color:cssv("--c1")}],{logx:true,logy:true,xmin:FMIN,xmax:FMAX,xl:"frequency (Hz)",yl:"|Z| (Ω)",mark:fr});
+  plot(document.getElementById("ie-th"),[{pts:fs.map((f,i)=>[f,carg(zs[i])]),color:cssv("--c3")}],{logx:true,xmin:FMIN,xmax:FMAX,ymin:-100,ymax:100,xl:"frequency (Hz)",yl:"θ (°)",mark:fr,zero:true,yfmt:v=>v+"°"});
+  const z=ieZ(type,fr), d=derive(cabs(z),carg(z),fr);
+  let srf=null; if(type==="rc")srf=1/(2*Math.PI*Math.sqrt(num("ie-esl")*num("ie-c"))); if(type==="rl")srf=1/(2*Math.PI*Math.sqrt(num("ie-l")*num("ie-cp")));
+  outGrid("ie-out",[["|Z|",si(d.Z,"Ω")],["θ",d.theta.toFixed(2)+"°"],["Rs",si(d.Rs,"Ω")],["Cs",si(d.Cs,"F")],["Cp",si(d.Cp,"F")],["Ls",si(d.Ls,"H")],["D",isFinite(d.D)?d.D.toPrecision(3):"—"],["Q",isFinite(d.Q)?d.Q.toPrecision(3):"—"],
+    ["Self-resonance f₀",srf?si(srf,"Hz")+(srf>FMAX?" (above 5 MHz)":srf<FMIN?" (below 42 Hz)":""):"none"]]);
+}
+
+/* ---------------------------------------------------------------- widget 3: parameter calculator */
+function drawCalc(){ const d=derive(num("pc-z"),num("pc-th"),num("pc-f"));
+  outGrid("pc-out",[["|Z|",si(d.Z,"Ω")],["θ",isFinite(d.theta)?d.theta+"°":"—"],["Rs",si(d.Rs,"Ω")],["X",si(d.X,"Ω")],["Ls",si(d.Ls,"H")],["Cs",si(d.Cs,"F")],["Rp",si(d.Rp,"Ω")],["Lp",si(d.Lp,"H")],["Cp",si(d.Cp,"F")],["|Y|",si(d.Y,"S")],["G",si(d.G,"S")],["B",si(d.B,"S")],["D",isFinite(d.D)?d.D.toPrecision(4):"—"],["Q",isFinite(d.Q)?d.Q.toPrecision(4):"—"]]);}
+
+/* ---------------------------------------------------------------- widget 4: open/short */
+function drawCal(){
+  const c=num("oc-c"), esr=num("oc-esr"), lr=num("oc-r"), ll=num("oc-l"), cs=num("oc-s"), fs=logspace(FMIN,FMAX,260);
+  const fixt=(f,zd)=>{const zs=C(lr,W(f)*ll), yo=C(0,W(f)*cs); return zd===null?cadd(zs,cinv(yo)):cadd(zs,cinv(cadd(yo,cinv(zd))));};
+  const T=[],M=[],K=[]; let worst=0, at=0;
+  fs.forEach(f=>{ const zd=C(esr,-1/(W(f)*c)), zm=fixt(f,zd), zsh=C(lr,W(f)*ll), zop=fixt(f,null);
+    const yo=cinv(csub(zop,zsh)), dz=csub(zm,zsh), zc=cdiv(dz,csub(C(1),cmul(dz,yo)));
+    const cst=derive(cabs(zd),carg(zd),f).Cs, csm=derive(cabs(zm),carg(zm),f).Cs, csc=derive(cabs(zc),carg(zc),f).Cs;
+    T.push([f,cst]); M.push([f,csm]); K.push([f,csc]); const e=Math.abs(csm/cst-1); if(e>worst&&csm>0){worst=e;at=f;} });
+  const all=T.concat(M).map(p=>p[1]).filter(v=>v>0); const lo=Math.min(...all), hi=Math.max(...all);
+  plot(document.getElementById("oc-plot"),[{pts:T,color:cssv("--c1"),w:4},{pts:M,color:cssv("--c2")},{pts:K,color:cssv("--c3"),dash:[6,5]}],
+    {logx:true,logy:true,xmin:FMIN,xmax:FMAX,ymin:lo/3,ymax:hi*1.5,xl:"frequency (Hz)",yl:"Cs (F)",legend:[["true",cssv("--c1")],["measured, no correction",cssv("--c2")],["after open/short correction",cssv("--c3")]]});
+  const f0=1/(2*Math.PI*Math.sqrt(ll*c));
+  outGrid("oc-out",[["Largest error without correction",(worst>=1?"×"+(worst+1).toPrecision(3)+" the true value":(worst*100).toPrecision(3)+" %")+" at "+si(at,"Hz",3)],["Apparent self-resonance (leads)",si(f0,"Hz")],["After correction","matches the true value"]]);
+}
+
+/* ---------------------------------------------------------------- widget 5: V mode */
+function drawV(){ const v=num("vm-v"), z=num("vm-z"), th=num("vm-th")*Math.PI/180, zd=C(z*Math.cos(th),z*Math.sin(th)), tot=cadd(zd,C(50));
+  const vd=v*z/cabs(tot), i=v/cabs(tot);
+  outGrid("vm-out",[["Voltage at the sample (V mode)",si(vd,"V")],["Share of the set level",(100*vd/v).toPrecision(3)+" %"],["Current through the sample",si(i,"A")],["In CV mode the sample gets",si(v,"V")]]);}
+
+/* ---------------------------------------------------------------- widget 6: Nyquist */
+function drawNy(){ const r0=num("ny-r0"), r1=num("ny-r1"), c1=num("ny-c1"), r2=num("ny-r2"), c2=num("ny-c2");
+  const zf=f=>{let z=cadd(C(r0),par(C(r1),C(0,-1/(W(f)*c1)))); if(r2>0)z=cadd(z,par(C(r2),C(0,-1/(W(f)*c2)))); return z;};
+  const all=logspace(1e-3,1e10,500).map(f=>{const z=zf(f);return [z.re,-z.im];});
+  const inr=logspace(FMIN,FMAX,60).map(f=>{const z=zf(f);return [z.re,-z.im];});
+  const xmax=r0+r1+(r2>0?r2:0);
+  plot(document.getElementById("ny-plot"),[{pts:all,color:cssv("--c1"),alpha:.35},{pts:inr,color:cssv("--c2"),dots:true}],{xmin:0,xmax:xmax*1.05,ymin:0,ymax:xmax*0.6,equal:true,xl:"Z′ (Ω)",yl:"−Z″ (Ω)"});
+  const fa=1/(2*Math.PI*r1*c1), fb=r2>0?1/(2*Math.PI*r2*c2):null, inR=f=>f>=FMIN&&f<=FMAX?"inside the meter range":"outside 42 Hz – 5 MHz";
+  outGrid("ny-out",[["Top of arc 1 at f = 1/(2πR1C1)",si(fa,"Hz")+" · "+inR(fa)],["Top of arc 2",fb?si(fb,"Hz")+" · "+inR(fb):"—"],["Low-frequency end (Z′ = R0+R1+R2)",si(xmax,"Ω")],["High-frequency end (Z′ = R0)",si(r0,"Ω")]]);}
+
+/* ---------------------------------------------------------------- widget 7: dielectric */
+function drawDiel(){ const cp=num("dc-cp"), d=num("dc-d"), t=num("dc-t")*1e-3, dia=num("dc-dia")*1e-3, f=num("dc-f"), e0=8.854e-12;
+  const A=Math.PI*(dia/2)**2, c0=e0*A/t, ep=cp/c0, epp=ep*d, sig=W(f)*e0*epp, den=ep*ep+epp*epp;
+  outGrid("dc-out",[["Electrode area A",si(A*1e6,"mm²")],["C₀ = ε₀A/d",si(c0,"F")],["ε′ (relative permittivity)",ep.toPrecision(4)],["ε″ = ε′·D",epp.toPrecision(4)],["σ_ac = ωε₀ε″",si(sig,"S/m")],["M′",(ep/den).toPrecision(4)],["M″",(epp/den).toPrecision(4)]]);}
+
+/* ---------------------------------------------------------------- wiring */
+const WID=[["w-phasor",drawPhasor],["w-imp",drawImp],["w-calc",drawCalc],["w-cal",drawCal],["w-vmode",drawV],["w-nyq",drawNy],["w-diel",drawDiel]];
+function drawAll(){WID.forEach(([id,fn])=>{const el=document.getElementById(id); if(el&&el.offsetParent!==null){try{fn();}catch(e){console.error(id,e);}}});}
+WID.forEach(([id,fn])=>{const el=document.getElementById(id); el.addEventListener("input",()=>{try{fn();}catch(e){console.error(id,e);}}); el.addEventListener("change",()=>{try{fn();}catch(e){console.error(id,e);}});});
+window.addEventListener("resize",drawAll);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",drawAll);
+const start=location.hash.slice(1), startEl=start&&document.getElementById(start);
+showPart(startEl?startEl.closest("section.sec").dataset.part:"A");
+if(startEl)goTo(start);
+</script>
 </body>
 </html>

@@ -5,8 +5,10 @@ import html
 import json
 import math
 import os
+import re
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
@@ -14,7 +16,7 @@ from pathlib import Path
 import numpy as np
 import pyqtgraph as pg
 from PySide6.QtCore import QSettings, Qt, QThread, QTimer, QUrl
-from PySide6.QtGui import QAction, QColor, QFont, QKeySequence
+from PySide6.QtGui import QAction, QColor, QDesktopServices, QFont, QKeySequence
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
     QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
@@ -145,59 +147,104 @@ class DriverDialog(QDialog):
             QApplication.restoreOverrideCursor()
 
 
-MANUAL_PATH =Path(__file__).resolve().parent.parent / "help" / "manual.html"
+MANUAL_PATH = Path(__file__).resolve().parent.parent / "help" / "manual.html"
+MANUAL_PARTS = {"A": "Getting started", "B": "Understanding impedance", "C": "Doing it right", "D": "Reference"}
+
+
+def manual_sections() -> list[dict]:
+    """Sections of the manual: id, part, title and plain text (for searching)."""
+    try:
+        doc = MANUAL_PATH.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    out = []
+    for m in re.finditer(r'<section class="sec" id="([^"]+)" data-part="([A-D])" data-title="([^"]+)">(.*?)</section>',
+                         doc, re.S):
+        body = re.sub(r"<(script|style|svg)\b.*?</\1>", " ", m.group(4), flags=re.S)
+        text = html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body)))
+        out.append({"id": m.group(1), "part": m.group(2), "title": html.unescape(m.group(3)), "text": text})
+    return out
+
+
+def open_manual(anchor: str = "") -> None:
+    """Open the interactive manual in the default web browser, at a section.
+
+    Browsers drop the #section of a file link when it is opened by Windows, so a tiny
+    redirect page in the temp folder carries it over."""
+    target = QUrl.fromLocalFile(str(MANUAL_PATH)).toEncoded().data().decode("ascii") + (f"#{anchor}" if anchor else "")
+    launcher = Path(tempfile.gettempdir()) / "lcr_sweep_manual.html"
+    launcher.write_text(
+        '<!DOCTYPE html><meta charset="utf-8"><title>LCR Sweep manual</title>'
+        f'<meta http-equiv="refresh" content="0;url={html.escape(target, quote=True)}">'
+        f'<a href="{html.escape(target, quote=True)}">Open the LCR Sweep manual</a>', encoding="utf-8")
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(launcher)))
 
 
 class HelpPanel(QWidget):
-    """The user manual (lcr_app/help/manual.html) with search."""
+    """Launcher for the interactive manual (opens in the web browser), with section list and search."""
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.sections = manual_sections()
         lay = QVBoxLayout(self)
-        bar = QHBoxLayout()
-        b_top = QPushButton("Contents")
-        b_top.clicked.connect(lambda: self.browser.scrollToAnchor("top"))
-        b_back = QPushButton("◄ Back")
+        intro = QLabel(
+            "<h2 style='margin:0'>User manual</h2>"
+            "<p>The manual opens in your <b>web browser</b> (works offline): beginner to advanced, with circuit "
+            "diagrams and interactive calculators and plots. Press <b>F1</b> anywhere to open it.</p>")
+        intro.setWordWrap(True)
+        lay.addWidget(intro)
+        b_open = QPushButton("📖  Open the manual")
+        b_open.setMinimumHeight(44)
+        f = QFont()
+        f.setPointSize(f.pointSize() + 2)
+        f.setBold(True)
+        b_open.setFont(f)
+        b_open.clicked.connect(lambda: open_manual())
+        lay.addWidget(b_open)
         self.search = QLineEdit()
-        self.search.setPlaceholderText("Search the manual (Enter = next match)")
-        self.search.returnPressed.connect(self.find_next)
-        b_find = QPushButton("Find")
-        b_find.clicked.connect(self.find_next)
-        b_ext = QPushButton("Open in web browser / print")
-        b_ext.clicked.connect(self.open_external)
-        for wdg in (b_top, b_back):
-            bar.addWidget(wdg)
-        bar.addWidget(self.search, 1)
-        bar.addWidget(b_find)
-        bar.addWidget(b_ext)
-        lay.addLayout(bar)
-        self.browser = QTextBrowser()
-        self.browser.setOpenExternalLinks(True)
-        b_back.clicked.connect(self.browser.backward)
-        if MANUAL_PATH.is_file():
-            self.browser.setSource(QUrl.fromLocalFile(str(MANUAL_PATH)))
-        else:
-            self.browser.setHtml(f"<p>Manual not found: {MANUAL_PATH}</p>")
-        lay.addWidget(self.browser, 1)
+        self.search.setPlaceholderText("Search the manual, e.g. ESR, guard, averaging, calibration…")
+        self.search.textChanged.connect(self._fill)
+        lay.addWidget(self.search)
+        self.list = QListWidget()
+        self.list.itemActivated.connect(self._open_item)
+        self.list.itemClicked.connect(self._open_item)
+        lay.addWidget(self.list, 1)
+        hint = QLabel("Click a section to open the manual there.")
+        hint.setStyleSheet("color:#666")
+        lay.addWidget(hint)
+        self._fill()
 
-    def find_next(self) -> None:
-        text = self.search.text().strip()
-        if not text:
-            return
-        if not self.browser.find(text):  # wrap around to the beginning
-            cur = self.browser.textCursor()
-            cur.movePosition(cur.MoveOperation.Start)
-            self.browser.setTextCursor(cur)
-            if not self.browser.find(text):
-                self.search.setStyleSheet("background:#fde2e2")
-                return
-        self.search.setStyleSheet("")
+    def _fill(self) -> None:
+        q = self.search.text().strip().lower()
+        self.list.clear()
+        last = None
+        for s in self.sections:
+            if q and q not in s["text"].lower() and q not in s["title"].lower():
+                continue
+            if s["part"] != last and not q:
+                head = QListWidgetItem(f"Part {s['part']}: {MANUAL_PARTS[s['part']]}")
+                head.setFlags(Qt.NoItemFlags)
+                fh = QFont()
+                fh.setBold(True)
+                head.setFont(fh)
+                self.list.addItem(head)
+                last = s["part"]
+            label = s["title"]
+            if q:
+                n = s["text"].lower().count(q)
+                label += f"   ({n} match{'es' if n != 1 else ''})"
+            it = QListWidgetItem(("    " if not q else "") + label)
+            it.setData(Qt.UserRole, s["id"])
+            self.list.addItem(it)
+        if q and self.list.count() == 0:
+            none = QListWidgetItem("No section contains this word.")
+            none.setFlags(Qt.NoItemFlags)
+            self.list.addItem(none)
 
-    def open_external(self) -> None:
-        if sys.platform == "win32":
-            os.startfile(str(MANUAL_PATH))  # type: ignore[attr-defined]
-        else:
-            subprocess.Popen(["xdg-open", str(MANUAL_PATH)])
+    def _open_item(self, item: QListWidgetItem) -> None:
+        anchor = item.data(Qt.UserRole)
+        if anchor:
+            open_manual(anchor)
 
 
 class MainWindow(QMainWindow):
@@ -273,7 +320,7 @@ class MainWindow(QMainWindow):
         h = m.addMenu("&Help")
         a = QAction("User manual", self)
         a.setShortcut(QKeySequence("F1"))
-        a.triggered.connect(self.show_manual)
+        a.triggered.connect(lambda: self.show_manual())
         h.addAction(a)
         for text, anchor in [("  Quick start", "quick"), ("  Connections (4-terminal)", "conn"),
                              ("  Calibration (open / short)", "cal"), ("  Parameters explained", "params"),
@@ -1287,9 +1334,13 @@ class MainWindow(QMainWindow):
     def check_drivers(self, error: str = "") -> None:
         DriverDialog(self, error).exec()
 
-    def show_manual(self, anchor: str = "top") -> None:
-        self.tabs.setCurrentWidget(self.help_panel)
-        self.help_panel.browser.scrollToAnchor(anchor or "top")
+    def show_manual(self, anchor: str = "") -> None:
+        """F1 / Help menu: open the interactive manual in the web browser."""
+        if not MANUAL_PATH.is_file():
+            QMessageBox.warning(self, "Manual", f"Manual not found:\n{MANUAL_PATH}")
+            return
+        open_manual("" if anchor in ("", "top") else anchor)
+        self._log(f"Manual opened in the web browser{' at ' + anchor if anchor and anchor != 'top' else ''}")
 
     def about(self) -> None:
         QMessageBox.about(self, "About", f"<b>LCR Sweep</b> v{__version__}<br>Frequency-sweep measurements with the "
