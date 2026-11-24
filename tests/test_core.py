@@ -74,7 +74,7 @@ def test_verify_profile_on_simulator():
     assert all(ok for _, _, ok in res), res
 
 
-@pytest.mark.parametrize("req,actual", [(42.0, 42.0), (53.06, 53.1), (999.96, 1000.0), (1234.5, 1234.0),
+@pytest.mark.parametrize("req,actual", [(42.0, 42.0), (53.06, 53.1), (999.96, 1000.0), (1234.5, 1235.0), (1234.4, 1234.0),
                                         (23128.0, 23130.0), (189570.0, 189600.0), (1229900.0, 1230000.0),
                                         (5e6, 5e6)])
 def test_meter_frequency_resolution(req, actual):
@@ -90,3 +90,19 @@ def test_sweep_frequencies_are_settable_and_unique():
     f = cfg.frequencies()
     assert f == [meter_frequency(x) for x in f] and len(f) == len(set(f))
     assert f[0] == 42 and f[-1] == 5e6
+
+
+def test_configure_rejects_unsupported_averaging():
+    meter = Hioki3532(SimulatedTransport(realtime=False))
+    with pytest.raises(ValueError):
+        meter.configure(MeasureSettings(averaging=3))
+    meter.configure(MeasureSettings(averaging=16))  # supported value works
+
+
+def test_configure_stops_when_meter_rejects_a_setting():
+    from lcr_app.instrument.transport import TransportError
+
+    meter = Hioki3532(SimulatedTransport(realtime=False))  # gets its own copy of the profile
+    meter.p["set_speed"] = ":BOGUS {speed}"  # simulator flags unknown commands as command errors
+    with pytest.raises(TransportError, match="rejected"):
+        meter.configure(MeasureSettings())

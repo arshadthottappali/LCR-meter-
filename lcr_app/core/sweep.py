@@ -23,7 +23,8 @@ def meter_frequency(f: float) -> float:
     """The frequency the 3532-50 actually sets for a requested f: 0.1 Hz steps below 1 kHz,
     1 Hz to 10 kHz, 10 Hz to 100 kHz, 100 Hz to 1 MHz, 1 kHz above 1 MHz."""
     step = next(s for limit, s in FREQ_STEPS if f < limit)
-    return round(round(f / step) * step, 1)
+    # the meter rounds halves up (1234.5 Hz -> 1235 Hz); Python's round() would give 1234
+    return round(math.floor(f / step + 0.5 + 1e-9) * step, 1)
 
 
 @dataclass

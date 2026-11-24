@@ -394,9 +394,11 @@ class MainWindow(QMainWindow):
         self.speed.setCurrentIndex(1)
         self.speed.currentIndexChanged.connect(self._update_estimate)
         fl.addRow("Speed:", self.speed)
-        self.avg = QSpinBox()
-        self.avg.setRange(1, 256)
-        self.avg.valueChanged.connect(self._update_estimate)
+        self.avg = QComboBox()
+        for n in self.profile.get("averaging_values", [1, 2, 4, 8, 16, 32, 64]):
+            self.avg.addItem("1 (off)" if n == 1 else str(n), n)
+        self.avg.setToolTip("Readings averaged inside the meter (the 3532-50 accepts only these values)")
+        self.avg.currentIndexChanged.connect(self._update_estimate)
         fl.addRow("Averaging (meter):", self.avg)
         self.settle = QSpinBox()
         self.settle.setRange(0, 60000)
@@ -672,7 +674,7 @@ class MainWindow(QMainWindow):
                 level_mode=self.level_mode.currentData(),
                 level_value=parse_si(self.level_val.text()),
                 speed=self.speed.currentData(),
-                averaging=self.avg.value(),
+                averaging=int(self.avg.currentData()),
                 use_trigger=self.use_trg.isChecked(),
             ),
         )
@@ -1296,7 +1298,7 @@ class MainWindow(QMainWindow):
 
     # ============================================================ settings
     _PERSIST = ["f_start", "f_stop", "level_val", "sample", "operator", "out_dir", "asset", "cal_due"]
-    _PERSIST_SPIN = ["n_points", "avg", "settle", "reads", "gpib_addr", "gpib_board", "test_no"]
+    _PERSIST_SPIN = ["n_points", "settle", "reads", "gpib_addr", "gpib_board", "test_no"]
     _PERSIST_COMBO = ["backend", "spacing", "level_mode", "speed"]
 
     def _restore_settings(self) -> None:
@@ -1313,6 +1315,9 @@ class MainWindow(QMainWindow):
             v = s.value(n)
             if v is not None:
                 getattr(self, n).setCurrentIndex(int(v))
+        v = s.value("avg_n")
+        if v is not None and self.avg.findData(int(v)) >= 0:
+            self.avg.setCurrentIndex(self.avg.findData(int(v)))
         v = s.value("visa_res")
         if v:
             self.visa_res.setEditText(str(v))
@@ -1348,6 +1353,7 @@ class MainWindow(QMainWindow):
             s.setValue(n, getattr(self, n).value())
         for n in self._PERSIST_COMBO:
             s.setValue(n, getattr(self, n).currentIndex())
+        s.setValue("avg_n", int(self.avg.currentData()))
         s.setValue("visa_res", self.visa_res.currentText())
         s.setValue("custom", self.custom.toPlainText())
         s.setValue("cal_path", self.comp.path if self.comp else "")

@@ -56,15 +56,28 @@ class Hioki3532:
     # ----------------------------------------------------------- configuration
     def configure(self, s: MeasureSettings) -> None:
         p = self.p
+        allowed = p.get("averaging_values")
+        if allowed and int(s.averaging) not in allowed:
+            raise ValueError(f"Averaging {s.averaging} is not supported by the meter; use one of {allowed}")
         self.t.write(p["clear_status"])
-        self.t.write(p["header_off"])
-        self.t.write(p["set_measure_items"])
-        self.t.write(p["set_range_auto"])
-        self.t.write(p["set_speed"].format(speed=s.speed))
-        self.t.write(p["set_averaging"].format(value=int(s.averaging)))
-        self.t.write(p["set_level_mode"].format(mode=s.level_mode))
-        self.t.write(p["set_level_value"][s.level_mode].format(value=s.level_value))
-        self.t.write(p["trigger_external"] if s.use_trigger else p["trigger_internal"])
+        for cmd in (
+            p["header_off"],
+            p["set_measure_items"],
+            p["set_range_auto"],
+            p["set_speed"].format(speed=s.speed),
+            p["set_averaging"].format(value=int(s.averaging)),
+            p["set_level_mode"].format(mode=s.level_mode),
+            p["set_level_value"][s.level_mode].format(value=s.level_value),
+            p["trigger_external"] if s.use_trigger else p["trigger_internal"],
+        ):
+            self.t.write(cmd)
+            # The meter silently keeps its old setting when it rejects a command, so check every
+            # setting: ESR bit 16 = execution error (value out of range), 32 = command error.
+            esr = self.event_status()
+            if esr > 0 and esr & 0x30:
+                raise TransportError(
+                    f"The meter rejected the setting '{cmd}' (*ESR? = {esr}). The value is probably outside "
+                    "what the meter allows at these settings. Nothing was measured.")
         self.use_trigger = s.use_trigger
 
     def set_frequency(self, hz: float) -> None:

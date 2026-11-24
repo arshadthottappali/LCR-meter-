@@ -24,6 +24,8 @@
   "set_speed": ":SPEEd {speed}",
   "speeds": ["FAST", "NORMal", "SLOW", "SLOW2"],
   "set_averaging": ":AVERaging {value:d}",
+  "_averaging_comment": "Values the 3532-50 accepts (tested on the meter; 1 = off). Others give an execution error.",
+  "averaging_values": [1, 2, 4, 8, 16, 32, 64],
   "set_range_auto": ":RANGe:AUTO ON",
 
   "trigger_internal": ":TRIGger INTernal",
