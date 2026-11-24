@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import ctypes
 import logging
+import os
 import sys
 import threading
 import time
@@ -167,10 +168,22 @@ class Gpib32Transport(Transport):
         errors = []
         for n in names:
             try:
-                return ctypes.windll.LoadLibrary(n) if sys.platform == "win32" else ctypes.CDLL(n)
+                return cls.load_one(n)
             except OSError as e:
                 errors.append(f"{n}: {e}")
         raise TransportError("No NI-488.2 compatible DLL found (" + "; ".join(errors) + ")")
+
+    @staticmethod
+    def load_one(name: str):
+        """Load one DLL. A bare name is taken from the Windows system folder first, so a
+        DLL with the same name planted in another folder is never picked up."""
+        if sys.platform != "win32":
+            return ctypes.CDLL(name)
+        if os.path.basename(name) == name:
+            sys_path = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", name)
+            if os.path.isfile(sys_path):
+                return ctypes.WinDLL(sys_path)
+        return ctypes.WinDLL(name)  # Python 3.8+ never searches the current folder here
 
     def _setup_prototypes(self) -> None:
         d = self.dll

@@ -19,6 +19,30 @@ from pathlib import Path
 from .params import PARAM_UNIT
 from .sweep import ROW_KEYS
 
+_FORMULA_START = ("=", "+", "-", "@")
+
+
+def meta_line(key: str, value) -> str:
+    """One '# key: value' metadata line, safe to open in Excel.
+
+    Line breaks are removed (they would start fake data rows), and any part after a
+    separator (, ; tab) that starts like a formula gets a leading apostrophe, so
+    spreadsheet programs show it as text instead of evaluating it (CSV injection).
+    """
+    if isinstance(value, (dict, list)):
+        value = json.dumps(value)
+    text = re.sub(r"[\r\n]+", " ", f"{key}: {value}")
+    text = re.sub(r"([,;\t]\s*)([=+\-@])", r"\1'\2", text)
+    return f"# {text}\n"
+
+
+def _xl_append(ws, values: list) -> None:
+    """ws.append() that stores formula-like strings as plain text (no formula injection)."""
+    ws.append(values)
+    for cell in ws[ws.max_row]:
+        if isinstance(cell.value, str) and cell.value.startswith(_FORMULA_START):
+            cell.data_type = "s"
+
 
 @dataclass
 class Run:
@@ -63,9 +87,7 @@ def save_csv(run: Run, path: str | Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as fh:
         for k, v in run.meta.items():
-            if isinstance(v, (dict, list)):
-                v = json.dumps(v)
-            fh.write(f"# {k}: {v}\n")
+            fh.write(meta_line(k, v))
         w = csv.writer(fh)
         w.writerow([header_label(k) for k in ROW_KEYS])
         for r in run.rows:
@@ -88,9 +110,7 @@ class CsvAppender:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.fh = open(self.path, "w", newline="", encoding="utf-8")
         for k, v in meta.items():
-            if isinstance(v, (dict, list)):
-                v = json.dumps(v)
-            self.fh.write(f"# {k}: {v}\n")
+            self.fh.write(meta_line(k, v))
         self.w = csv.writer(self.fh)
         self.w.writerow([header_label(k) for k in ROW_KEYS])
         self.fh.flush()
@@ -151,8 +171,9 @@ def save_xlsx(runs: list[Run], path: str | Path) -> Path:
         ws = wb.create_sheet(title)
         ws.append([header_label(k) for k in ROW_KEYS])
         for r in run.rows:
-            ws.append([None if isinstance(r.get(k), float) and math.isnan(r.get(k)) else r.get(k) for k in ROW_KEYS])
+            _xl_append(ws, [None if isinstance(r.get(k), float) and math.isnan(r.get(k)) else r.get(k)
+                            for k in ROW_KEYS])
         for k, v in run.meta.items():
-            info.append([title, k, json.dumps(v) if isinstance(v, (dict, list)) else str(v)])
+            _xl_append(info, [title, k, json.dumps(v) if isinstance(v, (dict, list)) else str(v)])
     wb.save(path)
     return Path(path)

@@ -116,7 +116,7 @@ Sections marked <span class="lvl">BEGINNER</span> are enough for everyday measur
 <li>You do <b>not</b> need to calibrate again for every sample. One calibration is valid as long as the
     settings, cables and fixture stay the same.</li>
 <li>The <b>test number</b> counts up by one after every completed sweep, so each measurement gets its own
-    file: <code>20261123_181057_C100nF_Arshad_T3.csv</code> (date, time, sample, operator, test number).</li>
+    file: <code>20261123_181057_C100nF_JDoe_T3.csv</code> (date, time, sample, operator, test number).</li>
 </ul>
 
 <!-- ================================================================== -->
@@ -557,7 +557,7 @@ behaviour is plotted upwards.</p>
 <h3>CSV layout</h3>
 <pre>
 # sample: C100nF                     ← metadata lines start with #
-# operator: Arshad
+# operator: JDoe
 # test_number: 3
 # level_mode: CV
 # compensation: open+short (… file …\calibration\20261123_181957_open_short.json)
@@ -569,7 +569,7 @@ index,freq_set_Hz,freq_Hz,Z_ohm,theta_deg,Rs_ohm,X_ohm,Ls_H,Cs_F,Rp_ohm,Lp_H,Cp_
 <p>Reading the data in Python:</p>
 <pre>
 import pandas as pd
-df = pd.read_csv("20261123_181057_C100nF_Arshad_T3.csv", comment="#")
+df = pd.read_csv("20261123_181057_C100nF_JDoe_T3.csv", comment="#")
 df.plot(x="freq_Hz", y="Cs_F", logx=True)
 </pre>
 <p>In Excel: open the CSV directly (the # lines appear at the top). In Origin: import as CSV with "#" as comment

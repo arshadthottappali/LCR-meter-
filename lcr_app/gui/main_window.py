@@ -1,6 +1,7 @@
 """Main window of the LCR sweep application."""
 from __future__ import annotations
 
+import html
 import json
 import math
 import os
@@ -330,6 +331,7 @@ class MainWindow(QMainWindow):
         hb.addWidget(self.btn_connect)
         fl.addRow(hb)
         self.idn_lbl = QLabel("—")
+        self.idn_lbl.setTextFormat(Qt.PlainText)  # text from the instrument, never interpreted as HTML
         self.idn_lbl.setWordWrap(True)
         fl.addRow("Instrument:", self.idn_lbl)
         lay.addWidget(g)
@@ -1087,7 +1089,7 @@ class MainWindow(QMainWindow):
         if not self.cal_apply.isChecked():
             txt += " (correction OFF)"
         color = "#007a33" if self.cal_apply.isChecked() else "#777"
-        self.cal_status.setText(f"<span style='color:{color}'>{txt}</span>")
+        self.cal_status.setText(f"<span style='color:{color}'>{html.escape(txt)}</span>")
 
     # ========================================================= runs / plots
     def _add_run(self, run: Run) -> None:

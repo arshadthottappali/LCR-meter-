@@ -88,12 +88,18 @@ def usb_gpib_adapters() -> list[tuple[str, bool]]:
     """(name, connected) of GPIB adapters Windows knows about. Empty if it cannot be determined."""
     if sys.platform != "win32":
         return []
+    import os
     import subprocess
 
+    # full path: a bare "powershell" could start a program of that name from the current folder
+    exe = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "WindowsPowerShell", "v1.0",
+                       "powershell.exe")
+    if not os.path.isfile(exe):
+        return []
     ps = ("Get-PnpDevice | Where-Object { $_.FriendlyName -match 'GPIB|KUSB|82357' } | "
           "ForEach-Object { $_.Status + '|' + $_.FriendlyName }")
     try:
-        out = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
+        out = subprocess.run([exe, "-NoProfile", "-NonInteractive", "-Command", ps],
                              capture_output=True, text=True, timeout=15,
                              creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
     except Exception:
@@ -127,7 +133,7 @@ def check_drivers(list_visa: bool = True) -> DriverReport:
         found = []
         for name in Gpib32Transport.DLL_NAMES:
             try:
-                h = ctypes.windll.LoadLibrary(name)
+                h = Gpib32Transport.load_one(name)
                 found.append(_dll_path(h) or name)
             except OSError:
                 continue
@@ -171,7 +177,7 @@ def check_drivers(list_visa: bool = True) -> DriverReport:
 
     # 3. Advice
     if rep.gpib_dll and rep.gpib_resources:
-        rep.advice.append(f"Drivers look fine. Choose <b>VISA</b> with <code>{rep.gpib_resources[0]}</code> "
+        rep.advice.append(f"Drivers look fine. Choose <b>VISA</b> with <code>{_esc(rep.gpib_resources[0])}</code> "
                           "(or <b>GPIB DLL</b>) and click <b>Connect</b>.")
     elif rep.gpib_dll:
         rep.advice.append("The adapter driver is installed. Choose the interface <b>GPIB DLL</b> and click "

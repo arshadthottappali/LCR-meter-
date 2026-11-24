@@ -27,7 +27,7 @@ The app also has:
 * Sample metadata (name, operator, temperature, notes) and all instrument settings, stored in the CSV header.
 * **Fixture calibration (open / short)** with one button: the app guides you through measuring the empty and the
   shorted fixture, then corrects every reading. The raw readings are kept in the CSV (`Z_raw_ohm`, `theta_raw_deg`).
-* File names with date, time, sample, operator and test number, e.g. `20261123_181057_C100nF_Arshad_T3.csv`.
+* File names with date, time, sample, operator and test number, e.g. `20261123_181057_C100nF_JDoe_T3.csv`.
 * A **GPIB console** for typing any command by hand.
 * A **simulator** for trying the app without the meter.
 * A built-in **user manual** (tab *Help / Manual*, or press **F1**), from beginner to advanced: what impedance and
