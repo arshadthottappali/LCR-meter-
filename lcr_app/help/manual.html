@@ -598,7 +598,7 @@ character.</p>
 <h2>17. Troubleshooting</h2>
 <table border="1" cellpadding="4" cellspacing="0">
 <tr><th>Problem</th><th>Likely cause</th><th>What to do</th></tr>
-<tr><td>"No VISA resources found"</td><td>VISA library or adapter driver missing; adapter unplugged</td><td>check the KUSB-488A driver and VISA (Keithley KI-VISA or NI-VISA); try the interface "GPIB-32 DLL"</td></tr>
+<tr><td>"No VISA resources found"</td><td>VISA library or adapter driver missing; adapter unplugged</td><td>check the KUSB-488A driver and VISA (Keithley KI-VISA or NI-VISA); try the interface "GPIB DLL"</td></tr>
 <tr><td>Connect fails / timeout</td><td>wrong address, cable, meter off</td><td>check the GPIB address in the meter's interface settings; try GPIB1 instead of GPIB0; <b>Scan</b></td></tr>
 <tr><td>Values jump or are noisy</td><td>noise pick-up, moving cables, poor contact</td><td>connect GUARD, fix cables, clean contacts; SLOW / SLOW2, averaging</td></tr>
 <tr><td>Empty cells (overflow)</td><td>impedance outside the meter's range (e.g. open fixture at low f)</td><td>normal for an open fixture; for samples, change the frequency range</td></tr>
@@ -661,7 +661,7 @@ state.</p>
 
 <h3>18.5 How the program talks to the meter</h3>
 <p>The program uses GPIB through the Keithley KUSB-488A adapter, either via VISA (resource
-<code>GPIB0::1::INSTR</code>) or by calling <code>gpib-32.dll</code> directly. One sweep point is:</p>
+<code>GPIB0::1::INSTR</code>) or by calling the adapter driver's GPIB DLL (<code>gpib488.dll</code>, <code>ni4882.dll</code>) directly. One sweep point is:</p>
 <pre>
 :FREQuency 1.00000E+03      set the frequency
 (settling delay)

@@ -140,8 +140,10 @@ def _timeout_code(seconds: float) -> int:
 class Gpib32Transport(Transport):
     """Direct NI-488.2 API calls (ibdev/ibwrt/ibrd) through gpib-32.dll."""
 
-    name = "GPIB-32 DLL"
-    DLL_NAMES = ["gpib-32.dll", "ni4882.dll", "ke4882.dll"]
+    name = "GPIB DLL"
+    # 64-bit Python needs a 64-bit DLL: gpib488.dll (Keithley KUSB-488 driver, also NI) or ni4882.dll (NI-488.2).
+    # gpib-32.dll is the 32-bit name and only loads in 32-bit Python.
+    DLL_NAMES = ["gpib488.dll", "ni4882.dll", "gpib-32.dll", "ke4882.dll"]
 
     def __init__(self, address: int, board: int = 0, timeout_s: float = 5.0, dll_path: str = "") -> None:
         super().__init__()
@@ -160,7 +162,7 @@ class Gpib32Transport(Transport):
     @classmethod
     def _load_dll(cls, dll_path: str):
         if sys.platform != "win32" and not dll_path:
-            raise TransportError("The GPIB-32 DLL backend is only available on Windows.")
+            raise TransportError("The GPIB DLL backend is only available on Windows.")
         names = [dll_path] if dll_path else cls.DLL_NAMES
         errors = []
         for n in names:

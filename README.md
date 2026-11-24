@@ -35,37 +35,54 @@ The app also has:
   recipes for common parts, reading the plots, troubleshooting and dielectric analysis. It can also be opened in a
   web browser for printing ([`lcr_app/help/manual.html`](lcr_app/help/manual.html)).
 
-## 1. Hardware setup
+## Download and install (Windows 10/11, no Python needed)
+
+1. Download **`LCRSweep-<version>-windows.zip`** from the
+   [**Releases page**](https://github.com/arshadthottappali/LCR-meter-/releases/latest).
+2. Unzip it anywhere, for example to `C:\LCRSweep`. Keep the folder together.
+3. Double-click **`LCRSweep.exe`**. If Windows SmartScreen warns about an unknown publisher, click
+   *More info → Run anyway* (the program is not code-signed).
+
+To try it without a meter, choose the interface **Simulator (no hardware)** and click **Connect**.
+
+### The one other thing you need: your GPIB adapter's driver
+
+Windows needs the adapter manufacturer's driver to talk to any USB-GPIB adapter. Install it once; the app
+cannot include it. The app tells you if it is missing: **Tools → Check drivers / connection…** (it also opens
+by itself when *Scan* finds nothing or *Connect* fails) shows what is installed, whether the adapter is plugged
+in, and download links.
+
+| Your adapter | Install | Interface to choose in the app |
+|---|---|---|
+| Keithley **KUSB-488 / 488A / 488B** | KUSB-488A driver (tek.com → Support → Software, search "KUSB-488") | **GPIB DLL**, or **VISA** if a VISA library is installed |
+| NI **GPIB-USB-HS**, PCI/PCIe-GPIB | [NI-488.2](https://www.ni.com/en/support/downloads/drivers/download.ni-488-2.html) | **GPIB DLL** or **VISA** |
+| Keysight / Agilent **82357B** | [Keysight IO Libraries Suite](https://www.keysight.com/find/iosuite) | **VISA** |
+| Prologix GPIB-USB / Ethernet | not supported yet | – |
+
+* **GPIB DLL** talks to the adapter driver directly (`gpib488.dll` / `ni4882.dll`); no VISA needed.
+* **VISA** needs a VISA library in addition (NI-VISA, Keysight VISA or Keithley KI-VISA). Resource name `GPIB0::<address>::INSTR`.
+
+### Hardware setup
 
 1. The 3532-50 needs the **9518-01 GP-IB interface board** fitted in the rear option slot.
 2. On the meter, open the interface settings screen and set a **GPIB address**, for example `1`.
-3. Connect the GPIB cable to the KUSB-488A and plug the adapter into a USB port on the laptop.
+3. Connect the GPIB cable to the adapter and plug the adapter into a USB port. In the adapter's configuration
+   utility it should appear as **board 0** (GPIB0).
 
-## 2. Driver for the Keithley KUSB-488A (Windows 10/11)
-
-Install the **KUSB-488A driver** from Tektronix/Keithley (tek.com → Support → Software → search "KUSB-488A").
-It installs an NI-488.2 compatible `gpib-32.dll`. Then run the **KUSB-488 Configuration utility** and check
-that the adapter shows up as **board 0** (GPIB0).
-
-The app can talk to the meter in two ways:
-
-| Interface in the app | Requirements |
-|---|---|
-| **GPIB-32 DLL (KUSB-488A driver)** (recommended) | Only the KUSB-488A driver. The app calls `gpib-32.dll` directly. |
-| **VISA** | A VISA library as well: Keithley I/O Layer (KI-VISA), or NI-VISA with third-party GPIB ("passport") support. Resource name `GPIB0::1::INSTR`. |
-
-## 3. Install and run the software
+### Running from source instead (developers)
 
 1. Install **Python 3.10 or newer** from python.org and tick "Add Python to PATH".
 2. Double-click **`setup_windows.bat`** once. It installs the libraries.
 3. Double-click **`run_lcr.bat`** to start the program.
 
-Optional: **`build_exe.bat`** builds a stand-alone `dist\LCRSweep\LCRSweep.exe` that runs on lab PCs without Python.
+**`build_exe.bat`** builds the stand-alone `dist\LCRSweep\LCRSweep.exe` that is published on the Releases page.
 
-## 4. First measurement
+## First measurement
 
-1. **Connection**: choose *GPIB-32 DLL* and click **Scan**. The app finds the meter's address. Then click **Connect**, and the Instrument field should show `HIOKI,3532-50,…`.
-2. **Tools → Verify command profile on meter**: sends every command once and reads the meter's error register. Do this once with a new meter (see section 6).
+The built-in manual (**F1**) explains every step in detail.
+
+1. **Connection**: choose the interface for your adapter and click **Scan**. The app finds the meter's address. Then click **Connect**, and the Instrument field should show `HIOKI,3532,50,…`.
+2. **Tools → Verify command profile on meter**: sends every command once and reads the meter's error register. Do this once with a new meter (see "GPIB commands" below).
 3. Set the start and stop frequency, number of points, level and speed (sections 2 and 3).
 4. **Calibrate the fixture** (section 4, *Calibrate fixture (open + short)…*), **without the sample**:
    * step 1, OPEN: fixture empty, clips not touching;
@@ -80,7 +97,7 @@ Optional: **`build_exe.bat`** builds a stand-alone `dist\LCRSweep\LCRSweep.exe` 
 6. The data is saved automatically to `C:\Users\<you>\LCR_data\YYYYMMDD_HHMMSS_<sample>_<operator>_T<test no>.csv`.
    You can change the folder.
 
-## 5. How fast is it?
+## How fast is it?
 
 PyQt is not the limiting factor. The time per point is set by the meter:
 
@@ -91,7 +108,8 @@ PyQt is not the limiting factor. The time per point is set by the meter:
 | SLOW / SLOW2 | 72 ms / 140 ms |
 
 A GPIB command and response take about 1–2 ms. The real cost is the **settling delay** after each frequency
-change and the meter's **auto-ranging**. A 51-point sweep in NORMAL mode takes about 3–5 s.
+change and the meter's **auto-ranging**. Measured on a real 3532-50: 0.25–0.6 s per point in NORMAL mode with
+auto-ranging, so a 51-point sweep takes about 15–30 s.
 
 The measurement runs in a background thread, so the window stays responsive. The 3532-50 has no internal
 memory for storing a frequency sweep: its panel memory saves settings only. Measuring live from the PC is
@@ -99,7 +117,7 @@ therefore both the fastest and the only option, and every point reaches the disk
 
 For precise results (dielectrics, low D values), use **SLOW2**, averaging 4–16, and a settling delay of 100–200 ms.
 
-## 6. GPIB commands (command profile)
+## GPIB commands (command profile)
 
 All commands sent to the meter are in
 [`lcr_app/instrument/commands_3532_50.json`](lcr_app/instrument/commands_3532_50.json).
@@ -118,7 +136,7 @@ command strings have not yet been checked against it. If **Tools → Verify comm
 `FAIL`, correct that line in the JSON file (**Tools → Open command profile**), then click
 **Tools → Reload command profile**. You don't need to change any code.
 
-## 7. File format
+## File format
 
 ```
 # sample: C100nF

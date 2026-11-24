@@ -15,7 +15,7 @@ import pyqtgraph as pg
 from PySide6.QtCore import QSettings, Qt, QThread, QTimer, QUrl
 from PySide6.QtGui import QAction, QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
+    QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
     QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
     QPlainTextEdit, QProgressBar, QPushButton, QScrollArea, QSpinBox, QSplitter, QTableWidget,
     QTableWidgetItem, QTabWidget, QTextBrowser, QVBoxLayout, QWidget,
@@ -26,6 +26,7 @@ from ..core.compensation import Compensation
 from ..core.params import PARAM_KEYS, PARAM_LABEL, PARAM_UNIT, parse_si, si_format
 from ..core.storage import CsvAppender, Run, default_filename, load_csv, save_csv, save_xlsx
 from ..core.sweep import ROW_KEYS, SweepConfig, estimate_duration_s
+from ..instrument.diagnostics import check_drivers
 from ..instrument.hioki3532 import PROFILE_PATH, Hioki3532, MeasureSettings, load_profile
 from ..instrument.simulator import DUT_MODELS, SimulatedTransport
 from ..instrument.transport import Gpib32Transport, TransportError, VisaTransport
@@ -33,7 +34,7 @@ from .worker import SweepWorker, TrafficBridge
 
 BACKENDS = [
     ("visa", "VISA (Keithley KI-VISA / NI-VISA)"),
-    ("gpib32", "GPIB-32 DLL (KUSB-488A driver)"),
+    ("gpib32", "GPIB DLL (adapter driver only, no VISA needed)"),
     ("sim", "Simulator (no hardware)"),
 ]
 # Colour-blind-safe series palette (Okabe-Ito)
@@ -116,7 +117,34 @@ class PlotPanel(QWidget):
                            symbolPen=None, name=run.name)
 
 
-MANUAL_PATH = Path(__file__).resolve().parent.parent / "help" / "manual.html"
+class DriverDialog(QDialog):
+    """Shows which GPIB/VISA drivers are installed and what to do next."""
+
+    def __init__(self, parent=None, error: str = "") -> None:
+        super().__init__(parent)
+        self.error = error
+        self.setWindowTitle("Check drivers / connection")
+        self.resize(760, 640)
+        lay = QVBoxLayout(self)
+        self.view = QTextBrowser()
+        self.view.setOpenExternalLinks(True)
+        lay.addWidget(self.view, 1)
+        bb = QDialogButtonBox(QDialogButtonBox.Close)
+        again = bb.addButton("Check again", QDialogButtonBox.ActionRole)
+        again.clicked.connect(self.refresh)
+        bb.rejected.connect(self.reject)
+        lay.addWidget(bb)
+        self.refresh()
+
+    def refresh(self) -> None:
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            self.view.setHtml(check_drivers().to_html(self.error))
+        finally:
+            QApplication.restoreOverrideCursor()
+
+
+MANUAL_PATH =Path(__file__).resolve().parent.parent / "help" / "manual.html"
 
 
 class HelpPanel(QWidget):
@@ -228,6 +256,10 @@ class MainWindow(QMainWindow):
                 a.setShortcut(sc)
             f.addAction(a)
         t = m.addMenu("&Tools")
+        a = QAction("Check drivers / connection…", self)
+        a.triggered.connect(lambda: self.check_drivers())
+        t.addAction(a)
+        t.addSeparator()
         a = QAction("Verify command profile on meter", self)
         a.triggered.connect(self.verify_profile)
         t.addAction(a)
@@ -684,27 +716,38 @@ class MainWindow(QMainWindow):
     # ============================================================ connection
     def scan(self) -> None:
         b = self.backend.currentData()
+        problem = ""
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
             if b == "visa":
-                res = VisaTransport.list_resources()
-                self.visa_res.clear()
-                self.visa_res.addItems(res)
+                try:
+                    res = VisaTransport.list_resources()
+                except Exception as e:
+                    res = []
+                    if "RSRC_NFOUND" not in str(e):
+                        raise
+                if res:
+                    self.visa_res.clear()
+                    self.visa_res.addItems(res)
                 self._log(f"VISA resources: {res or 'none found'}")
                 if not res:
-                    QMessageBox.information(self, "Scan", "No VISA resources found.\nIs Keithley I/O Layer (KI-VISA) or NI-VISA installed?\nTry the 'GPIB-32 DLL' interface instead.")
+                    problem = "Scan: VISA found no instruments."
             elif b == "gpib32":
                 found = Gpib32Transport.scan(self.gpib_board.value())
                 self._log(f"GPIB devices: {found or 'none found'}")
                 if found:
                     self.gpib_addr.setValue(found[0][0])
+                    QApplication.restoreOverrideCursor()
                     QMessageBox.information(self, "Scan", "\n".join(f"Address {a}: {i}" for a, i in found))
-                else:
-                    QMessageBox.warning(self, "Scan", "No instruments answered *IDN? on addresses 1–30.")
+                    return
+                problem = "Scan: no instrument answered *IDN? on GPIB addresses 1–30."
         except Exception as e:
-            QMessageBox.critical(self, "Scan failed", str(e))
+            problem = f"Scan failed: {e}"
         finally:
             QApplication.restoreOverrideCursor()
+        if problem:
+            self._log(problem)
+            self.check_drivers(problem)
 
     def toggle_connect(self) -> None:
         if self.meter:
@@ -729,8 +772,8 @@ class MainWindow(QMainWindow):
                 raise TransportError("No answer to *IDN?")
         except Exception as e:
             QApplication.restoreOverrideCursor()
-            QMessageBox.critical(self, "Connection failed", f"{e}\n\nCheck: adapter driver installed, GPIB cable, "
-                                 "meter switched on, GPIB address on the 3532-50 interface settings.")
+            self._log(f"Connection failed: {e}")
+            self.check_drivers(f"Connection failed: {e}")
             return
         QApplication.restoreOverrideCursor()
         self.transport, self.meter = t, meter
@@ -1204,6 +1247,9 @@ class MainWindow(QMainWindow):
             self._log("Command profile reloaded")
         except (OSError, json.JSONDecodeError) as e:
             QMessageBox.critical(self, "Profile", f"Cannot read {PROFILE_PATH}:\n{e}")
+
+    def check_drivers(self, error: str = "") -> None:
+        DriverDialog(self, error).exec()
 
     def show_manual(self, anchor: str = "top") -> None:
         self.tabs.setCurrentWidget(self.help_panel)
