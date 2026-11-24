@@ -160,7 +160,7 @@ df = pd.read_csv("20261123_164308_C100nF.csv", comment="#")
 
 ```
 lcr_app/
-  instrument/  transport.py (VISA + gpib-32.dll), hioki3532.py (driver), simulator.py, commands_3532_50.json
+  instrument/  transport.py (VISA + GPIB DLL), diagnostics.py (driver check), hioki3532.py (driver), simulator.py, commands_3532_50.json
   core/        params.py (Z, θ → all parameters), sweep.py (sweep engine), storage.py (CSV/Excel),
                compensation.py (open/short correction)
   gui/         main_window.py, worker.py (background thread)
@@ -168,3 +168,16 @@ tests/         pytest tests (run: python -m pytest tests)
 ```
 
 To develop or run from source on any OS: `pip install -r requirements.txt` then `python -m lcr_app`.
+
+`packaging/make_release.py` (called by `build_exe.bat`) builds the release zip: PyInstaller build, removal of
+GPL-only Qt modules, third-party notices and licence texts, SHA-256 checksum.
+
+## Licences and trademarks
+
+The Windows release bundles Qt / PySide6 under the **LGPL-3.0** and other open-source components under
+permissive licences (MIT, BSD, PSF); see [`packaging/THIRD_PARTY_NOTICES.md`](packaging/THIRD_PARTY_NOTICES.md)
+and the texts in [`packaging/licenses`](packaging/licenses). The release contains no GPL-only Qt modules.
+
+Hioki and LCR HiTESTER are trademarks of HIOKI E.E. CORPORATION; Keithley of Tektronix, Inc.; NI-488.2 and
+NI-VISA of National Instruments; Keysight of Keysight Technologies. They are used only to name compatible
+hardware and software. This project is not affiliated with or endorsed by any of these companies.

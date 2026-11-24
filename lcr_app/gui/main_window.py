@@ -334,6 +334,15 @@ class MainWindow(QMainWindow):
         self.idn_lbl.setTextFormat(Qt.PlainText)  # text from the instrument, never interpreted as HTML
         self.idn_lbl.setWordWrap(True)
         fl.addRow("Instrument:", self.idn_lbl)
+        self.asset = QLineEdit()
+        self.asset.setPlaceholderText("serial / inventory no. from the meter's label")
+        self.asset.setToolTip("Saved in every CSV header, so each result can be traced to the meter used")
+        fl.addRow("Meter ID:", self.asset)
+        self.cal_due = QLineEdit()
+        self.cal_due.setPlaceholderText("YYYY-MM-DD (from the calibration sticker)")
+        self.cal_due.setToolTip("Date until which the meter's own calibration is valid. Saved in every CSV header; "
+                                "the app warns before a sweep when the date has passed.")
+        fl.addRow("Meter cal. due:", self.cal_due)
         lay.addWidget(g)
 
         # ---- sweep
@@ -691,6 +700,8 @@ class MainWindow(QMainWindow):
             "notes": self.notes.text(),
             "start_time": datetime.now().isoformat(timespec="seconds"),
             "instrument": self.idn_lbl.text(),
+            "instrument_id": self.asset.text().strip() or "not entered",
+            "instrument_calibration_due": self.cal_due.text().strip() or "not entered",
             "interface": self.backend.currentText(),
             "level_mode": cfg.meas.level_mode,
             "level_value": cfg.meas.level_value,
@@ -831,6 +842,8 @@ class MainWindow(QMainWindow):
             return
         warn = self._check_max_level(cfg)
         if warn and QMessageBox.question(self, "Signal level", warn + "\n\nStart anyway?") != QMessageBox.Yes:
+            return
+        if not self._check_meter_calibration_date():
             return
         if not self._check_calibration(cfg):
             return
@@ -1046,6 +1059,25 @@ class MainWindow(QMainWindow):
         box.addButton(QMessageBox.Cancel)
         box.exec()
         return "cal" if box.clickedButton() is b_cal else "go" if box.clickedButton() is b_go else "cancel"
+
+    def _check_meter_calibration_date(self) -> bool:
+        """Warn when the meter's own (lab) calibration has expired. False = do not start."""
+        txt = self.cal_due.text().strip()
+        if not txt:
+            return True
+        try:
+            due = datetime.strptime(txt, "%Y-%m-%d").date()
+        except ValueError:
+            QMessageBox.warning(self, "Meter calibration date",
+                                f"'{txt}' is not a date in the form YYYY-MM-DD (e.g. 2027-03-31).")
+            return False
+        if due >= datetime.now().date():
+            return True
+        return QMessageBox.question(
+            self, "Meter calibration expired",
+            f"The meter's calibration was valid until {due:%Y-%m-%d}.\n\nResults measured now are not covered by a "
+            "valid calibration (not traceable). The CSV header records the date.\n\nMeasure anyway?"
+        ) == QMessageBox.Yes
 
     def _check_calibration(self, cfg: SweepConfig) -> bool:
         """Ask what to do when the calibration is missing or does not fit. False = do not start."""
@@ -1263,7 +1295,7 @@ class MainWindow(QMainWindow):
                           "parameters (Rs, X, Ls, Cs, Rp, Lp, Cp, |Y|, G, B, D, Q) are calculated from them.")
 
     # ============================================================ settings
-    _PERSIST = ["f_start", "f_stop", "level_val", "sample", "operator", "out_dir"]
+    _PERSIST = ["f_start", "f_stop", "level_val", "sample", "operator", "out_dir", "asset", "cal_due"]
     _PERSIST_SPIN = ["n_points", "avg", "settle", "reads", "gpib_addr", "gpib_board", "test_no"]
     _PERSIST_COMBO = ["backend", "spacing", "level_mode", "speed"]
 

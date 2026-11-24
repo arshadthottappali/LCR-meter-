@@ -15,6 +15,17 @@ from .compensation import Compensation
 from .params import PARAM_KEYS, derive
 
 
+# Frequency setting resolution of the 3532-50 (Hioki datasheet): (upper limit Hz, step Hz)
+FREQ_STEPS = [(1e3, 0.1), (1e4, 1.0), (1e5, 10.0), (1e6, 100.0), (math.inf, 1000.0)]
+
+
+def meter_frequency(f: float) -> float:
+    """The frequency the 3532-50 actually sets for a requested f: 0.1 Hz steps below 1 kHz,
+    1 Hz to 10 kHz, 10 Hz to 100 kHz, 100 Hz to 1 MHz, 1 kHz above 1 MHz."""
+    step = next(s for limit, s in FREQ_STEPS if f < limit)
+    return round(round(f / step) * step, 1)
+
+
 @dataclass
 class SweepConfig:
     start_hz: float = 100.0
@@ -35,7 +46,12 @@ class SweepConfig:
             freqs = list(np.geomspace(self.start_hz, self.stop_hz, int(self.points)))
         else:
             freqs = list(np.linspace(self.start_hz, self.stop_hz, int(self.points)))
-        return [float(f"{f:.5g}") for f in freqs]  # meter resolution: 5 digits
+        out: list[float] = []
+        for f in freqs:  # round to what the meter can really set; drop resulting duplicates
+            q = meter_frequency(f)
+            if q not in out:
+                out.append(q)
+        return out
 
     def to_dict(self) -> dict:
         return asdict(self)

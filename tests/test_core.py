@@ -72,3 +72,21 @@ def test_verify_profile_on_simulator():
     meter = Hioki3532(SimulatedTransport(realtime=False))
     res = meter.verify_profile(MeasureSettings())
     assert all(ok for _, _, ok in res), res
+
+
+@pytest.mark.parametrize("req,actual", [(42.0, 42.0), (53.06, 53.1), (999.96, 1000.0), (1234.5, 1234.0),
+                                        (23128.0, 23130.0), (189570.0, 189600.0), (1229900.0, 1230000.0),
+                                        (5e6, 5e6)])
+def test_meter_frequency_resolution(req, actual):
+    from lcr_app.core.sweep import meter_frequency
+
+    assert meter_frequency(req) == actual
+
+
+def test_sweep_frequencies_are_settable_and_unique():
+    from lcr_app.core.sweep import meter_frequency
+
+    cfg = SweepConfig(start_hz=42, stop_hz=5e6, points=201, spacing="log")
+    f = cfg.frequencies()
+    assert f == [meter_frequency(x) for x in f] and len(f) == len(set(f))
+    assert f[0] == 42 and f[-1] == 5e6

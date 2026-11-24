@@ -422,7 +422,7 @@ or for very small/large impedances), the calibration was essential.</p>
 <pre>
   V  (open-circuit voltage)            CV (constant voltage)             CC (constant current)
 
-   ┌─────┐  R_out                       meter adjusts the source         meter adjusts the source
+   ┌─────┐  R_out = 50 Ω                meter adjusts the source         meter adjusts the source
    │  ~  ├──/\/\/──┬──●                 until the voltage AT THE         until the current THROUGH
    │  V  │         │                    SAMPLE equals the set value      THE SAMPLE equals the set value
    └──┬──┘       [DUT]
@@ -432,7 +432,8 @@ or for very small/large impedances), the calibration was essential.</p>
 </pre>
 <table border="1" cellpadding="4" cellspacing="0">
 <tr><th>Mode</th><th>What it does</th><th>Use it for</th></tr>
-<tr><td><b>V</b></td><td>sets the source voltage; the voltage at the sample depends on its impedance</td>
+<tr><td><b>V</b></td><td>sets the source voltage behind the meter's 50 Ω output resistance; the voltage at the sample
+    is V·|Z|/|Z + 50 Ω| (e.g. only about half of the set value for a 50 Ω sample)</td>
     <td>general measurements; resistors, film / C0G capacitors, air-core inductors; parts whose value does not depend on the level</td></tr>
 <tr><td><b>CV</b></td><td>keeps the voltage across the sample constant at every frequency</td>
     <td>voltage-dependent parts: class 2 ceramic capacitors (X7R, Y5V), electrolytics, dielectric materials, sensors; comparing with datasheets (usually 1 V at 1 kHz, or 0.5 V at 120 Hz for large capacitors)</td></tr>
@@ -482,6 +483,10 @@ or biological samples), and higher levels only on purpose (e.g. to study voltage
 <li><b>Points:</b> 11–21 for a quick look, 51 for normal work, 101–201 for smooth curves or sharp resonances.</li>
 <li>The estimated time under the Start button is a rough guide; auto-ranging and the settling delay usually add
     0.2–0.6 s per point.</li>
+<li><b>Frequency resolution:</b> the meter sets frequencies in steps of 0.1 Hz below 1 kHz, 1 Hz up to 10 kHz,
+    10 Hz up to 100 kHz, 100 Hz up to 1 MHz and 1 kHz above 1 MHz. The program rounds every frequency to these
+    steps, so the frequency in the data file is exactly the one the meter used (e.g. a requested 53.06 Hz
+    becomes 53.1 Hz). Close points that round to the same frequency are measured only once.</li>
 </ul>
 
 <!-- ================================================================== -->
@@ -592,6 +597,21 @@ character.</p>
     The spread shows how much of the result is contact and handling, not the part.</li>
 <li>Let the meter warm up for at least 30–60 minutes before precise measurements.</li>
 </ul>
+<h3>Traceability: can the result be trusted in a report?</h3>
+<p>A result is only traceable when the <b>meter itself</b> is calibrated (by a calibration lab, usually every
+year; see the sticker on the meter) and you can show which meter was used. The program helps:</p>
+<ul>
+<li>Enter <b>Meter ID</b> (serial or inventory number from the meter's label) and <b>Meter cal. due</b>
+    (date on the calibration sticker) in section 1. Both are written into every CSV header. The program warns
+    before a sweep when the calibration date has passed.</li>
+<li>Every CSV also records the instrument reply (<code>*IDN?</code>), all settings, the software version,
+    the fixture calibration file used, the operator, date and time, and the raw readings before correction.</li>
+<li>The fixture open/short calibration in section 4 is a <b>correction</b> of your cables and fixture, not a
+    calibration of the meter. It does not replace the lab calibration.</li>
+<li>For formal work (e.g. ISO/IEC 17025), also state the measurement uncertainty: start from the meter's
+    accuracy (basic accuracy ±0.08 % for |Z| and ±0.05° for θ, larger at the edges of the ranges and above
+    1 MHz; see Hioki's accuracy tables), and add the repeatability you measured.</li>
+</ul>
 
 <!-- ================================================================== -->
 <a name="trouble"></a>
@@ -686,6 +706,26 @@ state.</p>
 <p>Time per point ≈ settling delay + readings/point × (averaging × measuring time + GPIB and auto-range overhead).
 Auto-ranging adds the most when |Z| changes a lot between points. For long series of identical samples, a
 custom frequency list with only the frequencies you need is the fastest option.</p>
+
+<h3>18.7 Instrument specifications used by the program</h3>
+<p>From the Hioki 3532-50 datasheet. The program rounds frequencies to the meter's steps and warns before a
+sweep when the level is outside these limits.</p>
+<table border="1" cellpadding="4" cellspacing="0">
+<tr><th>Item</th><th>Specification</th></tr>
+<tr><td>Frequency</td><td>42 Hz – 5 MHz (±0.005 %); steps 0.1 Hz (&lt; 1 kHz), 1 Hz (&lt; 10 kHz), 10 Hz (&lt; 100 kHz),
+    100 Hz (&lt; 1 MHz), 1 kHz (1–5 MHz)</td></tr>
+<tr><td>Level V / CV</td><td>10 mV – 5 V rms up to 1 MHz; 50 mV – 1 V rms from 1 to 5 MHz; 1 mV steps;
+    max. short-circuit current 100 mA rms</td></tr>
+<tr><td>Level CC</td><td>10 µA – 100 mA rms up to 1 MHz; 50 µA – 20 mA rms from 1 to 5 MHz; 10 µA steps;
+    max. voltage 5 V rms</td></tr>
+<tr><td>Output resistance</td><td>50 Ω</td></tr>
+<tr><td>|Z| range</td><td>10 mΩ – 200 MΩ (depends on frequency and level); θ −180° … +180°</td></tr>
+<tr><td>Basic accuracy</td><td>|Z| ±0.08 % of reading, θ ±0.05°</td></tr>
+<tr><td>Measuring time</td><td>FAST 5 ms, NORMAL 21 ms, SLOW 72 ms, SLOW2 140 ms (typical)</td></tr>
+<tr><td>DC bias</td><td>only with an external bias option, ±40 V max. (not used by this program)</td></tr>
+<tr><td>Safety / EMC</td><td>EN 61010-1; measurement terminals overvoltage category I; EN 61326-1</td></tr>
+<tr><td>Interfaces</td><td>GP-IB (9518-01 board) or RS-232C (option); this program uses GP-IB</td></tr>
+</table>
 
 <!-- ================================================================== -->
 <a name="glossary"></a>
