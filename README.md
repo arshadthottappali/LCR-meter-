@@ -174,6 +174,10 @@ GPL-only Qt modules, third-party notices and licence texts, SHA-256 checksum.
 
 ## Licences and trademarks
 
+**LCR Sweep: Copyright (c) 2026 arshadthottappali. All rights reserved.** You may download and use the
+released program free of charge; copying, modifying or redistributing the code or the program needs written
+permission. See [`LICENSE`](LICENSE) for the exact terms.
+
 The Windows release bundles Qt / PySide6 under the **LGPL-3.0** and other open-source components under
 permissive licences (MIT, BSD, PSF); see [`packaging/THIRD_PARTY_NOTICES.md`](packaging/THIRD_PARTY_NOTICES.md)
 and the texts in [`packaging/licenses`](packaging/licenses). The release contains no GPL-only Qt modules.
