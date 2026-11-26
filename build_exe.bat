@@ -1,11 +1,8 @@
 @echo off
-REM Builds a stand-alone LCRSweep.exe in dist\LCRSweep\ (no Python needed on the lab PC).
+REM Builds the stand-alone release: dist\LCRSweep\LCRSweep.exe and dist\LCRSweep-<version>-windows.zip
+REM (no Python needed on the lab PC). See packaging\make_release.py for the steps.
 cd /d "%~dp0"
 call .venv\Scripts\activate.bat
 pip install pyinstaller
-pyinstaller --noconfirm --windowed --name LCRSweep ^
-  --add-data "lcr_app\instrument\commands_3532_50.json;lcr_app\instrument" ^
-  --collect-data docx --collect-submodules markdown.extensions ^
-  --hidden-import keyring.backends.Windows --collect-submodules google.genai run_lcr.py
-echo Done: dist\LCRSweep\LCRSweep.exe
+python packaging\make_release.py
 pause

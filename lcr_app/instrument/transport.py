@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import ctypes
 import logging
+import os
 import sys
 import threading
 import time
@@ -140,8 +141,10 @@ def _timeout_code(seconds: float) -> int:
 class Gpib32Transport(Transport):
     """Direct NI-488.2 API calls (ibdev/ibwrt/ibrd) through gpib-32.dll."""
 
-    name = "GPIB-32 DLL"
-    DLL_NAMES = ["gpib-32.dll", "ni4882.dll", "ke4882.dll"]
+    name = "GPIB DLL"
+    # 64-bit Python needs a 64-bit DLL: gpib488.dll (Keithley KUSB-488 driver, also NI) or ni4882.dll (NI-488.2).
+    # gpib-32.dll is the 32-bit name and only loads in 32-bit Python.
+    DLL_NAMES = ["gpib488.dll", "ni4882.dll", "gpib-32.dll", "ke4882.dll"]
 
     def __init__(self, address: int, board: int = 0, timeout_s: float = 5.0, dll_path: str = "") -> None:
         super().__init__()
@@ -160,15 +163,27 @@ class Gpib32Transport(Transport):
     @classmethod
     def _load_dll(cls, dll_path: str):
         if sys.platform != "win32" and not dll_path:
-            raise TransportError("The GPIB-32 DLL backend is only available on Windows.")
+            raise TransportError("The GPIB DLL backend is only available on Windows.")
         names = [dll_path] if dll_path else cls.DLL_NAMES
         errors = []
         for n in names:
             try:
-                return ctypes.windll.LoadLibrary(n) if sys.platform == "win32" else ctypes.CDLL(n)
+                return cls.load_one(n)
             except OSError as e:
                 errors.append(f"{n}: {e}")
         raise TransportError("No NI-488.2 compatible DLL found (" + "; ".join(errors) + ")")
+
+    @staticmethod
+    def load_one(name: str):
+        """Load one DLL. A bare name is taken from the Windows system folder first, so a
+        DLL with the same name planted in another folder is never picked up."""
+        if sys.platform != "win32":
+            return ctypes.CDLL(name)
+        if os.path.basename(name) == name:
+            sys_path = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", name)
+            if os.path.isfile(sys_path):
+                return ctypes.WinDLL(sys_path)
+        return ctypes.WinDLL(name)  # Python 3.8+ never searches the current folder here
 
     def _setup_prototypes(self) -> None:
         d = self.dll

@@ -568,7 +568,7 @@ class ResearchTab(QWidget):
         self._fill_runs(uses)
         rep = d / "report.html"
         if rep.exists():
-            self.browser.setSource(QUrl.fromLocalFile(str(rep)))
+            self._show_report(rep)
         self.qs.setValue("research/last_project", str(d))
         self._update_completeness()
 
@@ -884,11 +884,17 @@ class ResearchTab(QWidget):
         self.q_box.hide()
         self.status_lbl.setText(f"Report written: {paths['html']}")
         self._log("step", f"Report: {paths['md'].parent}")
-        self.browser.clearHistory()
-        self.browser.setSource(QUrl())
-        self.browser.setSource(QUrl.fromLocalFile(str(paths["html"])))
+        self._show_report(paths["html"])
         self.tabs.setCurrentIndex(1)
         self.form.set_values(self.sample.values)  # answers to questions may have been added
+
+    def _show_report(self, html_path: Path) -> None:
+        """Load the report fresh from disk (setSource would show a cached copy of the same file)."""
+        doc = self.browser.document()
+        doc.clear()
+        doc.setBaseUrl(QUrl.fromLocalFile(str(Path(html_path).parent) + "/"))
+        self.browser.setSearchPaths([str(Path(html_path).parent)])
+        self.browser.setHtml(Path(html_path).read_text(encoding="utf-8"))
 
     def _report_err(self, e: str) -> None:
         self.btn_ai.setEnabled(True)

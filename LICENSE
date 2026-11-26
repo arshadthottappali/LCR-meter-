@@ -1,0 +1,32 @@
+LCR Sweep
+Copyright (c) 2026 arshadthottappali (https://github.com/arshadthottappali). All rights reserved.
+
+This software (the source code in this repository and the "LCR Sweep" program built from it) is
+proprietary. No licence is granted except the permissions stated below.
+
+1. Permitted use
+   You may download, install and use the released program free of charge for your own measurements,
+   including in research, teaching and commercial laboratory work.
+
+2. Not permitted without prior written permission of the copyright holder
+   - copying, modifying, translating or creating derivative works of the source code or the program;
+   - distributing, publishing, selling, renting or sub-licensing the source code or the program,
+     in original or modified form;
+   - removing or changing copyright, licence or trademark notices.
+   Viewing and forking this repository on GitHub remain possible as provided by GitHub's Terms of Service.
+
+3. Third-party components
+   The released program contains third-party open-source components (among them Qt and Qt for Python
+   under the GNU Lesser General Public License v3). They are licensed under their own terms, listed in
+   THIRD_PARTY_NOTICES.md and the "licenses" folder. Nothing in this licence restricts the rights those
+   licences give you. In particular, you may replace the Qt / PySide6 library files with modified versions
+   for your own use, and reverse engineer the program to the extent needed to debug such modifications.
+
+4. No warranty, limitation of liability
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+   LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+   IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING
+   DAMAGE TO INSTRUMENTS, SAMPLES OR DATA, ARISING FROM THE USE OF THE SOFTWARE. You are responsible for
+   checking measurement results and for operating your instruments within their specifications.
+
+For permission requests, contact the copyright holder via the GitHub repository.

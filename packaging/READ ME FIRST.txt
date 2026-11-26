@@ -1,0 +1,36 @@
+LCR Sweep - frequency sweeps with the Hioki 3532-50 LCR HiTESTER over GPIB
+===========================================================================
+
+START
+  Double-click LCRSweep.exe. Keep all files of this folder together.
+  If Windows SmartScreen warns about an unknown publisher:
+  "More info" -> "Run anyway" (the program is not code-signed).
+
+TRY IT WITHOUT A METER
+  Interface: "Simulator (no hardware)" -> Connect.
+
+WITH THE METER: one-time driver install
+  Windows needs the driver of your USB-GPIB adapter (this program cannot include it):
+    Keithley KUSB-488 / 488A / 488B : KUSB-488A driver  (tek.com > Support > Software, search "KUSB-488")
+    NI GPIB-USB-HS, PCI/PCIe-GPIB   : NI-488.2          (ni.com)
+    Keysight / Agilent 82357B       : Keysight IO Libraries Suite (keysight.com/find/iosuite)
+  In the program, Tools > Check drivers / connection shows what is installed,
+  whether the adapter is plugged in, and the download links.
+
+  Interface "GPIB DLL" needs only the adapter driver.
+  Interface "VISA" also needs a VISA library (NI-VISA, Keysight VISA or Keithley KI-VISA);
+  resource name GPIB0::<address>::INSTR, e.g. GPIB0::1::INSTR.
+
+ON THE METER
+  The 3532-50 needs the 9518-01 GP-IB interface board. Set its GPIB address
+  on the interface settings screen (e.g. 1).
+
+HELP
+  Press F1 in the program for the full manual (beginner to advanced):
+  measurements explained, connections, calibration, settings, troubleshooting.
+
+DATA
+  Saved automatically to C:\Users\<you>\LCR_data\ as CSV
+  (date_time_sample_operator_T<test no>.csv).
+
+Source code and updates: https://github.com/arshadthottappali/LCR-meter-

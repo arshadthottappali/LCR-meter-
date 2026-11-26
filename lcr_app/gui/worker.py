@@ -5,6 +5,7 @@ import traceback
 
 from PySide6.QtCore import QObject, Signal, Slot
 
+from ..core.compensation import Compensation
 from ..core.sweep import SweepConfig, SweepRunner
 from ..instrument.hioki3532 import Hioki3532
 
@@ -14,9 +15,9 @@ class SweepWorker(QObject):
     finished = Signal(bool)  # True = completed, False = aborted
     failed = Signal(str)
 
-    def __init__(self, meter: Hioki3532, cfg: SweepConfig) -> None:
+    def __init__(self, meter: Hioki3532, cfg: SweepConfig, compensation: Compensation | None = None) -> None:
         super().__init__()
-        self.runner = SweepRunner(meter, cfg)
+        self.runner = SweepRunner(meter, cfg, compensation)
 
     @Slot()
     def run(self) -> None:
