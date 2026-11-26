@@ -224,6 +224,7 @@ def test_gemini_wrapper_with_mocked_client(monkeypatch):
     from lcr_app.research.llm import GeminiLLM
 
     llm = GeminiLLM("fake-key", "gemini-test")
+    llm.min_interval = 0
     sent = []
 
     class Resp:
@@ -304,3 +305,43 @@ def test_source_parsers(monkeypatch):
     assert not S.crossref_verify("10.1/abc", "Something completely different about cooking")["verified"]
     mol = S.pubchem_lookup("pvdf")
     assert mol["cid"] == 123 and mol["cas"] == "24937-79-9"
+
+
+def test_gemini_switches_model_without_free_quota(monkeypatch):
+    from google.genai import types
+
+    from lcr_app.research.llm import GeminiLLM, LLMError
+
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    llm = GeminiLLM("fake-key", "gemini-3-pro-preview")
+    llm._model_cache = ["gemini-3-pro-preview", "gemini-2.5-flash", "gemini-2.5-flash-lite"]
+    used = []
+
+    class E(Exception):
+        code = 429
+
+    class Resp:
+        text = '{"ok": true}'
+        usage_metadata = types.GenerateContentResponseUsageMetadata(total_token_count=1)
+
+    def gen(model, contents, config):
+        used.append(model)
+        if model == "gemini-3-pro-preview":
+            raise E("429 RESOURCE_EXHAUSTED. Quota exceeded for metric: generate_content_free_tier_requests, "
+                    "limit: 0, model: gemini-3-pro")
+        if model == "gemini-2.5-flash":
+            raise E("429 RESOURCE_EXHAUSTED quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier")
+        return Resp()
+
+    monkeypatch.setattr(llm.client.models, "generate_content", gen)
+    assert llm.generate_json("t", "s", "p") == {"ok": True}
+    assert used == ["gemini-3-pro-preview", "gemini-2.5-flash", "gemini-2.5-flash-lite"]
+    assert llm.model == "gemini-2.5-flash-lite"
+
+    # every model refused -> clear error with Google's message
+    llm2 = GeminiLLM("fake-key", "gemini-2.5-flash")
+    llm2._model_cache = ["gemini-2.5-flash"]
+    monkeypatch.setattr(llm2.client.models, "generate_content",
+                        lambda **k: (_ for _ in ()).throw(E("429 RESOURCE_EXHAUSTED limit: 0")))
+    with pytest.raises(LLMError, match="limit: 0"):
+        llm2.generate("t", "s", "p")

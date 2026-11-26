@@ -5,6 +5,14 @@ REM DLLs that break Qt/PySide6). Safe to run again: .venv is rebuilt if the Pyth
 cd /d "%~dp0"
 set PY=
 py -3 --version >nul 2>&1 && set PY=py -3
+if not defined PY (
+  REM no py launcher: take the first "python" on PATH that is not Anaconda/conda and is 3.10+
+  for /f "delims=" %%p in ('where python 2^>nul') do (
+    if not defined PY (
+      "%%p" -c "import sys,os;sys.exit(0 if sys.version_info>=(3,10) and not os.path.isdir(os.path.join(sys.base_prefix,'conda-meta')) else 1)" >nul 2>&1 && set PY="%%p"
+    )
+  )
+)
 if not defined PY (python --version >nul 2>&1 && set PY=python)
 if not defined PY (echo Python 3.10+ is required: https://www.python.org/downloads/ & pause & exit /b 1)
 %PY% -c "import sys,os;sys.exit(1 if os.path.isdir(os.path.join(sys.base_prefix,chr(99)+chr(111)+chr(110)+chr(100)+chr(97)+chr(45)+chr(109)+chr(101)+chr(116)+chr(97))) else 0)"

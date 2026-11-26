@@ -228,15 +228,33 @@ class AISettingsDialog(QDialog):
             QApplication.restoreOverrideCursor()
             QMessageBox.warning(self, "Gemini", str(e))
             return
+        cur = self.model.currentText().strip()
+        # one tiny real request: shows which model really has free quota for this key
+        llm.model = cur if cur in names else pick_default_model(names)
+        llm._model_cache = names
+        llm.min_interval = 0
+        notes = []
+        llm.status = notes.append
+        try:
+            llm.generate("Key test", "Answer with one word.", "Reply with OK.")
+            working, problem = llm.model, ""
+        except LLMError as e:
+            working, problem = "", str(e)
         QApplication.restoreOverrideCursor()
-        cur = self.model.currentText()
         self.model.clear()
         self.model.addItem("")  # automatic
         self.model.addItems(names)
-        best = pick_default_model(names)
-        self.model.setCurrentText(cur if cur in names else best)
-        QMessageBox.information(self, "Gemini", f"The key works. {len(names)} models available.\n"
-                                                f"Recommended (free): {best}")
+        if working:
+            self.model.setCurrentText(working)
+            extra = ("\n\n" + "\n".join(notes)) if notes else ""
+            QMessageBox.information(self, "Gemini", f"The key works. {len(names)} models available.\n"
+                                                    f"Model with free quota that answered: {working}{extra}\n\n"
+                                                    "Click Save to use it.")
+        else:
+            QMessageBox.warning(self, "Gemini", "The key is valid, but no model answered:\n\n" + problem +
+                                "\n\nIf it mentions 'limit: 0', your Google project has no free quota for these "
+                                "models (this happens in some regions or for some account types). "
+                                "If it mentions a daily limit, try again tomorrow.")
 
     def save(self) -> None:
         ok = set_secret("gemini_api_key", self.key.text().strip())

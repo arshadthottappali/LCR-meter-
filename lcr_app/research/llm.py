@@ -66,22 +66,35 @@ def set_secret(name: str, value: str) -> bool:
 
 
 # ------------------------------------------------------------------- helpers
-def pick_default_model(names: list[str]) -> str:
-    """Prefer the newest plain 'flash' model (good quality, generous free tier)."""
-    bad = ("lite", "image", "tts", "live", "audio", "embedding", "vision", "exp", "learnlm", "gemma", "robotics",
-           "computer", "native")
+def rank_models(names: list[str]) -> list[str]:
+    """Order models for the free tier: newest stable 'flash', then 'flash-lite', then the rest.
+
+    Pro and preview models often have no free quota, so they come last."""
+    bad = ("image", "tts", "live", "audio", "embedding", "vision", "exp", "learnlm", "gemma", "robotics",
+           "computer", "native", "thinking", "aqa")
 
     def ver(n: str) -> float:
         m = re.search(r"gemini-(\d+(?:\.\d+)?)", n)
         return float(m.group(1)) if m else 0.0
 
-    clean = [n for n in names if "gemini" in n and not any(b in n for b in bad)]
-    flash = [n for n in clean if "flash" in n]
-    for group in (flash, clean, names):
-        if group:
-            stable = [n for n in group if "preview" not in n] or group
-            return sorted(stable, key=lambda n: (ver(n), -len(n)), reverse=True)[0]
-    return ""
+    def group(n: str) -> int:
+        if "flash" in n and "lite" not in n and "preview" not in n:
+            return 0
+        if "flash" in n and "lite" in n and "preview" not in n:
+            return 1
+        if "flash" in n:
+            return 2
+        if "preview" not in n:
+            return 3
+        return 4
+
+    usable = [n for n in names if "gemini" in n and not any(b in n for b in bad)] or list(names)
+    return sorted(usable, key=lambda n: (group(n), -ver(n), len(n)))
+
+
+def pick_default_model(names: list[str]) -> str:
+    r = rank_models(names)
+    return r[0] if r else ""
 
 
 def extract_json(text: str):
@@ -122,6 +135,10 @@ class GeminiLLM:
         self.before_send = before_send
         self.tokens = 0
         self.calls = 0
+        self.min_interval = 5.0  # seconds between requests (free tier: ~10–15 requests per minute)
+        self._last_call = 0.0
+        self._model_cache: list[str] | None = None
+        self._failed: set[str] = set()
 
     # models -------------------------------------------------------------
     def list_models(self) -> list[str]:
@@ -137,32 +154,78 @@ class GeminiLLM:
 
     def ensure_model(self) -> str:
         if not self.model:
-            self.model = pick_default_model(self.list_models())
+            self.model = pick_default_model(self._models())
             if not self.model:
                 raise LLMError("No Gemini model is available for this key.")
+            self.status(f"Using Gemini model {self.model}")
         return self.model
+
+    def _models(self) -> list[str]:
+        if self._model_cache is None:
+            self._model_cache = self.list_models()
+        return self._model_cache
 
     # low level ----------------------------------------------------------
     @staticmethod
-    def _explain(e: Exception) -> str:
+    def _google_message(e: Exception) -> str:
+        """The human-readable part of Google's error."""
+        msg = getattr(e, "message", None) or str(e)
+        msg = re.sub(r"\s+", " ", str(msg)).strip()
+        return msg[:350]
+
+    @classmethod
+    def _explain(cls, e: Exception) -> str:
         s = str(e)
         if "API_KEY_INVALID" in s or "API key not valid" in s:
             return "The Gemini API key is not valid. Create a new one at " + GET_KEY_URL
         if "PERMISSION_DENIED" in s or " 403" in s:
-            return "Permission denied by Google (key restricted, or the API is not available in your region)."
-        if "RESOURCE_EXHAUSTED" in s or "429" in s:
-            return "Free-tier quota exhausted for now. Wait a minute (or until tomorrow for the daily quota)."
-        return s[:400]
+            return ("Permission denied by Google (key restricted, or the API is not available in your region). "
+                    f"Google says: {cls._google_message(e)}")
+        return cls._google_message(e)
+
+    @staticmethod
+    def _quota_kind(s: str) -> str:
+        """'none' = model has no free quota, 'day' = daily quota used up, 'minute' = wait and retry."""
+        if re.search(r"limit:\s*0\b", s) or re.search(r"quotaValue['\"]?\s*:\s*['\"]?0['\"]", s):
+            return "none"
+        if "PerDay" in s or "per day" in s.lower() or "per_day" in s.lower():
+            return "day"
+        return "minute"
+
+    def _pace(self) -> None:
+        """Free tier allows only a few requests per minute: keep a minimum gap between calls."""
+        gap = time.time() - self._last_call
+        if gap < self.min_interval:
+            time.sleep(self.min_interval - gap)
+        self._last_call = time.time()
+
+    def _switch_model(self, reason: str) -> bool:
+        """Move to the next model in the free-tier ranking. False if none is left."""
+        self._failed.add(self.model)
+        try:
+            ranked = rank_models(self._models())
+        except LLMError:
+            return False
+        nxt = next((m for m in ranked if m not in self._failed), "")
+        if not nxt:
+            return False
+        self.status(f"{reason} – switching to {nxt}")
+        self.model = nxt
+        return True
 
     def _call(self, contents, config, task: str, preview: str):
         if self.before_send and not self.before_send(task, preview):
             raise LLMCancelled("Cancelled by the user")
         self.ensure_model()
         delay = 0.0
-        for attempt in range(5):
+        retries = 0
+        last = ""
+        while True:
             if delay:
-                self.status(f"Gemini rate limit — waiting {delay:.0f} s (free tier) …")
+                self.status(f"Gemini per-minute limit ({self.model}) – waiting {delay:.0f} s …")
                 time.sleep(delay)
+                delay = 0.0
+            self._pace()
             try:
                 resp = self.client.models.generate_content(model=self.model, contents=contents, config=config)
                 self.calls += 1
@@ -171,16 +234,38 @@ class GeminiLLM:
                 return resp
             except Exception as e:  # google.genai.errors.APIError and network errors
                 s = str(e)
+                last = self._google_message(e)
                 code = getattr(e, "code", None)
-                if code in (429, 500, 503) or "RESOURCE_EXHAUSTED" in s or "UNAVAILABLE" in s:
-                    if "PerDay" in s or "per day" in s.lower():
-                        raise LLMError("The daily free quota of this model is used up. Try again tomorrow or "
-                                       "choose another model in AI settings.") from e
+                if code == 404 or "NOT_FOUND" in s:
+                    if self._switch_model(f"Model {self.model} is not available"):
+                        continue
+                    raise LLMError(f"No usable Gemini model. Google says: {last}") from e
+                if code == 429 or "RESOURCE_EXHAUSTED" in s:
+                    kind = self._quota_kind(s)
+                    if kind in ("none", "day"):
+                        why = ("has no free quota for this key" if kind == "none"
+                               else "has used up today's free quota")
+                        if self._switch_model(f"Model {self.model} {why}"):
+                            retries = 0
+                            continue
+                        raise LLMError("No Gemini model with free quota left for this key today. "
+                                       f"Google says: {last}") from e
+                    retries += 1
+                    if retries > 3:  # repeated per-minute refusals: try another model once
+                        if self._switch_model(f"Model {self.model} keeps hitting the rate limit"):
+                            retries = 0
+                            continue
+                        raise LLMError(f"Gemini keeps refusing requests (rate limit). Google says: {last}") from e
                     m = re.search(r"retry(?:Delay| in)[^0-9]*([0-9.]+)\s*s", s)
-                    delay = min(float(m.group(1)) + 1 if m else 15.0 * (attempt + 1), 90.0)
+                    delay = min(float(m.group(1)) + 1 if m else 20.0 * retries, 90.0)
+                    continue
+                if code in (500, 503) or "UNAVAILABLE" in s or "INTERNAL" in s:
+                    retries += 1
+                    if retries > 3:
+                        raise LLMError(f"Gemini is temporarily unavailable. Google says: {last}") from e
+                    delay = 10.0 * retries
                     continue
                 raise LLMError(self._explain(e)) from e
-        raise LLMError("Gemini kept refusing the request (rate limit). Try again later.")
 
     def generate(self, task: str, system: str, prompt: str, temperature: float = 0.3) -> str:
         from google.genai import types
