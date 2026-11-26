@@ -27,6 +27,7 @@ The app also has:
 * Sample metadata (name, operator, temperature, notes) and all instrument settings, stored in the CSV header.
 * A **GPIB console** for typing any command by hand.
 * A **simulator** for trying the app without the meter.
+* A **Research & Analysis tab** that computes permittivity, fits the data, compares it with the literature using a free AI model, and writes a scientific report. See [section 8](#8-research--analysis-tab).
 
 ## 1. Hardware setup
 
@@ -119,14 +120,85 @@ import pandas as pd
 df = pd.read_csv("20261123_164308_C100nF.csv", comment="#")
 ```
 
+## 8. Research & Analysis tab
+
+![Research tab](docs/research_tab.png)
+
+This tab turns a measurement into a short scientific report. It also works without the meter: you can
+load CSV files from this app, or **import files from any instrument or software** by mapping their
+columns (Cp & D, Cs & D, Cp & Rp, |Z| & θ, Z′ & Z″, or ε′ & ε″).
+
+**Step 1: describe the sample.** The form is organised in sections: material, geometry, film preparation,
+measurement conditions and aim. The **sample type** (thin-film sandwich, pellet, IDE, liquid cell or
+unknown) changes both the fields and the **diagram**. The diagram highlights in orange the dimension you
+are typing, for example the thickness *d* or the electrode overlap area. **Look up in PubChem** fills in
+the formula, CAS number, SMILES and synonyms. The description is saved as `sample_info.json` in the
+project folder `<data folder>/research/<material>/`.
+
+**Step 2: ① Analyse data (local, free, no AI).**
+- Permittivity and related quantities: ε′, ε″, tan δ, σ′ and M″, calculated from Cp, G and C₀ = ε₀A/d.
+- **Havriliak–Negami / Cole–Cole** relaxation fit with a dc-conductivity term, and a **Jonscher** power-law fit.
+- Loss-peak detection, and an Arrhenius activation energy if the runs have three or more temperatures.
+- **Thin-film data-quality checks:** electrode polarisation, electrode series resistance (e.g. ITO) with its
+  RC corner frequency, stray capacitance compared with the sample capacitance, leakage, short circuits,
+  inductive artefacts, ε′ < 1, and the instrument's impedance range.
+
+**Step 3: ② Research literature & write report (Google Gemini, free key).**
+1. Before anything is sent, a window shows **exactly** what will go to Google: the sample description
+   and the numeric summary, never the raw files. Nothing is sent unless you approve. In *AI settings*
+   you can also choose to approve every single request.
+2. Gemini plans the search queries. Free databases then search for papers: **OpenAlex** and
+   **Semantic Scholar**.
+3. Gemini reads the abstracts and extracts reported values (ε′, tan δ, σ, relaxation frequency, Eₐ …)
+   with their conditions. **A value is kept only if Gemini quotes the sentence it came from, and the code
+   finds that sentence in the abstract.**
+4. Gemini writes a literature summary, then compares it with your data. It can search again, look up a
+   measured value at a given frequency, or **ask you a question** (for example "Was the film dried?").
+   Your answer is saved in the sample file.
+5. **Every cited DOI is checked with Crossref.** Unknown or invented citations are removed automatically.
+
+**The report** contains:
+- Summary and sample/methods.
+- Results tables and fits, with 5 figures that include literature values as markers.
+- Data-quality section and literature context.
+- Comparison with the literature: a numeric table made by code, plus the AI's assessment.
+- Discussion, conclusions and next measurements.
+- Verified references, and a transparency appendix that shows what was sent to the AI.
+
+It is saved as `report.md`, `report.html`, `report_standalone.html` (one file with the images inside),
+**`report.docx`** and `references.bib`. **Report without AI** produces the same report with only the
+local analysis.
+
+**Caching, so work is never repeated:**
+
+| What | Where | Reused |
+|---|---|---|
+| Molecule (PubChem) | `knowledge/<InChIKey>/molecule.json` | always |
+| Searches, papers, extracted values | `knowledge/<material>/` | always (searches for 180 days) |
+| Literature summary | `knowledge/<material>/literature_summary.md` | until older than 180 days, or you tick "Search the literature again" |
+| DOI checks | `knowledge/_crossref.json` | always |
+| Analysis of a data file | `research/<material>/.cache/` | until the data or the geometry changes |
+
+The second report on the same material therefore only runs the comparison and the writing step.
+
+**Gemini key (free):** in **AI settings**, click **Get free key**. This opens
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey). Sign in, click *Create API key*, paste
+the key, then click **Test & load models**. The key is stored in the **Windows Credential Manager**,
+never in a file. The model is chosen automatically (the newest "flash" model), or you can pick one
+yourself. On the free tier, Google may use the requests to improve its products. That is why every
+send needs your approval.
+
 ## Project layout
 
 ```
 lcr_app/
   instrument/  transport.py (VISA + gpib-32.dll), hioki3532.py (driver), simulator.py, commands_3532_50.json
   core/        params.py (Z, θ → all parameters), sweep.py (sweep engine), storage.py (CSV/Excel)
-  gui/         main_window.py, worker.py (background thread)
-tests/         pytest tests (run: python -m pytest tests)
+  research/    sample.py (sample form schema), dielectric.py (ε, fits, checks), importer.py (any CSV),
+               sources.py (PubChem/OpenAlex/Semantic Scholar/Crossref), knowledge.py (cache),
+               llm.py (Gemini), agent.py (research agent), report.py (MD/HTML/Word), figures.py
+  gui/         main_window.py, worker.py, research_tab.py, research_dialogs.py, diagrams.py (SVG)
+tests/         pytest tests (run: python -m pytest tests) – AI and web services are mocked
 ```
 
 To develop or run from source on any OS: `pip install -r requirements.txt` then `python -m lcr_app`.

@@ -119,6 +119,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"LCR Sweep — Hioki 3532-50   v{__version__}")
+        self._session_key = ""
         self.resize(1400, 860)
         self.settings = QSettings("LCRSweep", "LCRSweep")
         self.profile = load_profile()
@@ -139,7 +140,14 @@ class MainWindow(QMainWindow):
         splitter.addWidget(self._build_right())
         splitter.setStretchFactor(1, 1)
         splitter.setSizes([420, 1000])
-        self.setCentralWidget(splitter)
+        from .research_tab import ResearchTab
+
+        self.top_tabs = QTabWidget()
+        self.top_tabs.setDocumentMode(True)
+        self.top_tabs.addTab(splitter, "📈  Measurement")
+        self.research = ResearchTab(self)
+        self.top_tabs.addTab(self.research, "🔬  Research && Analysis")
+        self.setCentralWidget(self.top_tabs)
         self.statusBar().showMessage("Not connected")
         self._restore_settings()
         self._backend_changed()
